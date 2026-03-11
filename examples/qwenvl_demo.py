@@ -12,7 +12,7 @@ def main():
         "Qwen/Qwen3-VL-8B-Instruct", dtype="auto", device_map="auto"
     )
 
-    # 添加隐私保护（一行代码）
+    # 添加隐私保护
     model = wrap_qwenvl(
         model,
         mechanism='vmf',      # 扰动机制: 'vmf', 'gaussian', 'laplace', 'norm_preserving'
