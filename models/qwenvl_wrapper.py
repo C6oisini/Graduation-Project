@@ -3,6 +3,7 @@ QwenVL 隐私保护包装器
 支持多种差分隐私机制，在 embedding 层后进行扰动
 """
 
+import warnings
 import torch
 import numpy as np
 from typing import Optional, Literal
@@ -95,12 +96,24 @@ class QwenVLPrivacyWrapper:
             if visual_module:
                 hook = visual_module.register_forward_hook(self._visual_hook)
                 self._hooks.append(hook)
+            else:
+                warnings.warn(
+                    "[Privacy] 视觉 hook 注册失败: 未找到 model.visual.merger.linear_fc2，"
+                    "视觉 embedding 将不会被扰动",
+                    RuntimeWarning, stacklevel=2
+                )
 
         if self.perturb_text:
             text_module = self._find_module('model.language_model.embed_tokens')
             if text_module:
                 hook = text_module.register_forward_hook(self._text_hook)
                 self._hooks.append(hook)
+            else:
+                warnings.warn(
+                    "[Privacy] 文本 hook 注册失败: 未找到 model.language_model.embed_tokens，"
+                    "文本 embedding 将不会被扰动",
+                    RuntimeWarning, stacklevel=2
+                )
 
     def _find_module(self, path: str):
         """通过路径查找模块"""
@@ -134,37 +147,35 @@ class QwenVLPrivacyWrapper:
         device = output.device
         dtype = output.dtype
 
-        # 原始统计
-        original_norm = torch.norm(output).item()
-
         # 扰动
         perturbed = self.perturbation.perturb(output, modality=modality)
 
         if isinstance(perturbed, torch.Tensor):
             perturbed = perturbed.to(device=device, dtype=dtype)
 
-        # 扰动后统计
-        perturbed_norm = torch.norm(perturbed).item()
+        # 逐 embedding 统计（展平为 [n_vectors, dim]）
+        flat_orig = output.detach().float().reshape(-1, output.shape[-1])
+        flat_pert = perturbed.detach().float().reshape(-1, perturbed.shape[-1])
 
-        # 角度偏差
-        cos_sim = torch.nn.functional.cosine_similarity(
-            output.view(-1).float(), perturbed.view(-1).float(), dim=0
-        ).item()
-        cos_sim = np.clip(cos_sim, -1, 1)
-        angle_deg = np.arccos(cos_sim) * 180 / np.pi
+        orig_norms = torch.norm(flat_orig, dim=1)
+        pert_norms = torch.norm(flat_pert, dim=1)
+        norm_ratio = (pert_norms / (orig_norms + 1e-10)).mean().item()
 
-        # 记录统计
+        cos_sim = torch.nn.functional.cosine_similarity(flat_orig, flat_pert, dim=1)
+        cos_sim = cos_sim.clamp(-1, 1)
+        angle_deg = torch.acos(cos_sim).mean().item() * 180 / np.pi
+
         self.stats[modality].append({
-            'original_norm': original_norm,
-            'perturbed_norm': perturbed_norm,
-            'norm_ratio': perturbed_norm / (original_norm + 1e-10),
+            'original_norm': orig_norms.mean().item(),
+            'perturbed_norm': pert_norms.mean().item(),
+            'norm_ratio': norm_ratio,
             'angle': angle_deg,
         })
 
         if self.verbose:
             print(f"[{self.mechanism_name.upper()}] {modality} | "
                   f"shape={original_shape} | "
-                  f"norm: {original_norm:.2f}→{perturbed_norm:.2f} | "
+                  f"norm: {orig_norms.mean().item():.2f}→{pert_norms.mean().item():.2f} | "
                   f"角度: {angle_deg:.1f}°")
 
         return perturbed
@@ -210,6 +221,9 @@ class QwenVLPrivacyWrapper:
 
     def __getattr__(self, name):
         """代理到原始模型"""
+        # 防止递归：如果访问的是 wrapper 自身的属性，直接抛出 AttributeError
+        if name in ('model', '_hooks', 'perturbation', 'enabled', 'stats'):
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
         return getattr(self.model, name)
 
     def __call__(self, *args, **kwargs):

@@ -60,22 +60,27 @@ class NormPreservingGaussian:
 
         # 保存原始范数
         original_norms = np.linalg.norm(x_2d, axis=1, keepdims=True)
-        original_norms = np.maximum(original_norms, 1e-10)
 
-        # 归一化
-        x_normalized = x_2d / original_norms
+        # 零向量掩码：零向量不扰动，直接保留
+        nonzero_mask = (original_norms.squeeze(1) > 1e-10)
 
         # 计算噪声标准差（对单位向量）
         sigma = np.sqrt(2 * np.log(1.25 / self.delta)) / self.epsilon
 
-        # 添加高斯噪声
-        noise = np.random.randn(*x_normalized.shape) * sigma
-        y_noisy = x_normalized + noise
+        y = x_2d.copy()
+        if nonzero_mask.any():
+            nz = x_2d[nonzero_mask]
+            nz_norms = original_norms[nonzero_mask]
+            nz_normalized = nz / nz_norms
 
-        # 重新归一化并恢复范数
-        y_norms = np.linalg.norm(y_noisy, axis=1, keepdims=True)
-        y_norms = np.maximum(y_norms, 1e-10)
-        y = (y_noisy / y_norms) * original_norms
+            # 添加高斯噪声
+            noise = np.random.randn(*nz_normalized.shape) * sigma
+            y_noisy = nz_normalized + noise
+
+            # 重新归一化并恢复范数
+            y_noisy_norms = np.linalg.norm(y_noisy, axis=1, keepdims=True)
+            y_noisy_norms = np.maximum(y_noisy_norms, 1e-10)
+            y[nonzero_mask] = (y_noisy / y_noisy_norms) * nz_norms
 
         y = y.reshape(original_shape)
 
