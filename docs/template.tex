@@ -1,0 +1,441 @@
+% !TEX program = xelatex
+% 湖南科技大学本科生毕业设计（论文）LaTeX模板
+% 纯模板版本 - 仅包含格式和结构
+
+\documentclass[a4paper,12pt]{article}
+
+% ==================== 基础包 ====================
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cite}
+
+% ==================== 页面设置 ====================
+\geometry{
+  a4paper,
+  top=30mm,
+  bottom=25mm,
+  left=25mm,
+  right=25mm,
+  headheight=20mm,
+  footskip=15mm
+}
+
+% ==================== 字体设置 ====================
+\setCJKmainfont{SimSun}[AutoFakeBold=2.5,ItalicFont=KaiTi]
+\setCJKsansfont{SimHei}[AutoFakeBold=2.5]
+\setCJKmonofont{FangSong}
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+
+% ==================== 页眉页脚设置 ====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\zihao{5}\songti 湖南科技大学本科生毕业设计（论文）}
+\fancyfoot[C]{\zihao{5}-\thepage-}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ==================== 字号命令 ====================
+\newcommand{\chuhao}{\fontsize{42pt}{\baselineskip}\selectfont}
+\newcommand{\xiaochuhao}{\fontsize{36pt}{\baselineskip}\selectfont}
+\newcommand{\yihao}{\fontsize{28pt}{\baselineskip}\selectfont}
+\newcommand{\erhao}{\fontsize{21pt}{\baselineskip}\selectfont}
+\newcommand{\xiaoerhao}{\fontsize{18pt}{\baselineskip}\selectfont}
+\newcommand{\sanhao}{\fontsize{15.75pt}{\baselineskip}\selectfont}
+\newcommand{\xiaosanhao}{\fontsize{15pt}{\baselineskip}\selectfont}
+\newcommand{\sihao}{\fontsize{14pt}{\baselineskip}\selectfont}
+\newcommand{\xiaosihao}{\fontsize{12pt}{\baselineskip}\selectfont}
+\newcommand{\wuhao}{\fontsize{10.5pt}{\baselineskip}\selectfont}
+\newcommand{\xiaowuhao}{\fontsize{9pt}{\baselineskip}\selectfont}
+
+\newcommand{\zihao}[1]{%
+  \ifnum#1=5\wuhao\fi
+  \ifnum#1=-4\xiaosihao\fi
+  \ifnum#1=4\sihao\fi
+  \ifnum#1=-2\xiaoerhao\fi
+  \ifnum#1=2\erhao\fi
+  \ifnum#1=3\sanhao\fi
+}
+
+% ==================== 章节格式设置 ====================
+\titleformat{\section}
+  {\xiaoerhao\songti\bfseries\centering}
+  {第\chinese{section}章}
+  {1em}
+  {}
+\titlespacing*{\section}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+
+\titleformat{\subsection}
+  {\sihao\songti\bfseries}
+  {\arabic{section}.\arabic{subsection}}
+  {1em}
+  {}
+\titlespacing*{\subsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+
+\titleformat{\subsubsection}
+  {\xiaosihao\songti\bfseries}
+  {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+  {1em}
+  {}
+\titlespacing*{\subsubsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+
+% ==================== 正文格式设置 ====================
+\setlength{\parindent}{2em}
+\setstretch{1.25}
+\xiaosihao\songti
+
+% ==================== 图表标题格式 ====================
+\captionsetup[figure]{
+  labelsep=space,
+  font={small,bf},
+  name={图},
+  labelfont=bf
+}
+
+\captionsetup[table]{
+  labelsep=space,
+  font={small,bf},
+  name={表},
+  labelfont=bf,
+  position=top
+}
+
+% ==================== 目录格式设置 ====================
+\titlecontents{section}[0em]
+  {\xiaosihao\songti\bfseries}
+  {第\chinese{section}章\quad}
+  {}
+  {\titlerule*[0.5pc]{.}\contentspage}
+
+\titlecontents{subsection}[2em]
+  {\xiaosihao\songti}
+  {\thecontentslabel\quad}
+  {}
+  {\titlerule*[0.5pc]{.}\contentspage}
+
+% ==================== 参考文献格式 ====================
+\bibliographystyle{plain}
+\renewcommand{\refname}{\sihao\songti\bfseries 参考文献}
+
+% ==================== 摘要环境 ====================
+\newenvironment{cnabstract}{
+  \newpage
+  \begin{center}
+    \xiaoerhao\songti\bfseries 摘\quad 要
+  \end{center}
+  \vspace{1\baselineskip}
+  \xiaosihao\songti
+}{
+  \vspace{1\baselineskip}
+}
+
+\newcommand{\cnkeywords}[1]{
+  \noindent\textbf{关键词：}#1
+}
+
+\newenvironment{enabstract}{
+  \newpage
+  \begin{center}
+    \xiaoerhao\bfseries ABSTRACT
+  \end{center}
+  \vspace{1\baselineskip}
+  \xiaosihao
+}{
+  \vspace{1\baselineskip}
+}
+
+\newcommand{\enkeywords}[1]{
+  \noindent\textbf{Keywords: }#1
+}
+
+% ==================== 文档信息（需填写）====================
+\newcommand{\thesistitle}{论文题目}
+\newcommand{\thesisauthor}{学生姓名}
+\newcommand{\thesisstudentid}{学号}
+\newcommand{\thesismajor}{专业}
+\newcommand{\thesiscollege}{学院}
+\newcommand{\thesisadvisor}{指导教师}
+\newcommand{\thesisdate}{\today}
+
+% ==================== 正文开始 ====================
+\begin{document}
+
+% ==================== 封面 ====================
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+
+  {\erhao\heiti 湖南科技大学}
+
+  \vspace{1cm}
+
+  {\yihao\heiti 毕业设计（论文）}
+
+  \vspace{3cm}
+
+  \begin{tabular}{rl}
+    {\sanhao\songti 题\quad 目：} & \underline{\makebox[8cm][c]{\sanhao\songti\thesistitle}} \\[1cm]
+    {\sanhao\songti 学生姓名：} & \underline{\makebox[8cm][c]{\sanhao\songti\thesisauthor}} \\[1cm]
+    {\sanhao\songti 学\quad 号：} & \underline{\makebox[8cm][c]{\sanhao\songti\thesisstudentid}} \\[1cm]
+    {\sanhao\songti 专\quad 业：} & \underline{\makebox[8cm][c]{\sanhao\songti\thesismajor}} \\[1cm]
+    {\sanhao\songti 学\quad 院：} & \underline{\makebox[8cm][c]{\sanhao\songti\thesiscollege}} \\[1cm]
+    {\sanhao\songti 指导教师：} & \underline{\makebox[8cm][c]{\sanhao\songti\thesisadvisor}} \\[1cm]
+  \end{tabular}
+
+  \vfill
+
+  {\sanhao\songti 二〇二\quad 年\quad 月\quad 日}
+\end{titlepage}
+
+% ==================== 扉页 ====================
+\newpage
+\thispagestyle{empty}
+\begin{center}
+  {\erhao\heiti 湖南科技大学}
+
+  \vspace{0.5cm}
+
+  {\xiaoerhao\heiti 毕业设计（论文）任务书}
+\end{center}
+
+\vspace{1cm}
+
+\noindent
+\begin{tabular}{ll}
+  院 & 系（教研室）： \\[0.5cm]
+  系（教研室）主任： & （签名）\quad\quad\quad\quad 年\quad 月\quad 日 \\[0.5cm]
+\end{tabular}
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{lll}
+  学生姓名： & 学号： & 专业： \\[0.5cm]
+\end{tabular}
+
+\vspace{0.5cm}
+
+\noindent
+1 设计（论文）题目及专题：
+
+\vspace{2cm}
+
+\noindent
+2 学生设计（论文）时间：自\quad\quad 年\quad 月\quad 日开始至\quad\quad 年\quad 月\quad 日止
+
+\vspace{1cm}
+
+\noindent
+3 设计（论文）所用资源和参考资料：
+
+\vspace{3cm}
+
+\noindent
+4 设计（论文）应完成的主要内容：
+
+\vspace{3cm}
+
+\noindent
+5 提交设计（论文）形式（设计说明与图纸或论文等）及要求：
+
+\vspace{2cm}
+
+\noindent
+6 发题时间：\quad\quad 年\quad\quad 月\quad\quad 日
+
+\vspace{1cm}
+
+\noindent
+\begin{tabular}{ll}
+  指导教师： & （签名） \\[0.5cm]
+  学\quad 生： & （签名） \\
+\end{tabular}
+
+% ==================== 指导人评语 ====================
+\newpage
+\thispagestyle{empty}
+\begin{center}
+  {\erhao\heiti 湖南科技大学}
+
+  \vspace{0.5cm}
+
+  {\xiaoerhao\heiti 毕业设计（论文）指导人评语}
+\end{center}
+
+\vspace{1cm}
+
+\noindent
+[主要对学生毕业设计（论文）的工作态度，研究内容与方法，工作量，文献应用，创新性，实用性，科学性，文本（图纸）规范程度，存在的不足等进行综合评价]
+
+\vspace{8cm}
+
+\noindent
+\begin{tabular}{ll}
+  指导人： & （签名） \\[0.5cm]
+  & 年\quad 月\quad 日 \\[1cm]
+  指导人评定成绩： & \\
+\end{tabular}
+
+% ==================== 评阅人评语 ====================
+\newpage
+\thispagestyle{empty}
+\begin{center}
+  {\erhao\heiti 湖南科技大学}
+
+  \vspace{0.5cm}
+
+  {\xiaoerhao\heiti 毕业设计（论文）评阅人评语}
+\end{center}
+
+\vspace{1cm}
+
+\noindent
+[主要对学生毕业设计（论文）的文本格式、图纸规范程度，工作量，研究内容与方法，实用性与科学性，结论和存在的不足等进行综合评价]
+
+\vspace{8cm}
+
+\noindent
+\begin{tabular}{ll}
+  评阅人： & （签名） \\[0.5cm]
+  & 年\quad 月\quad 日 \\[1cm]
+  评阅人评定成绩： & \\
+\end{tabular}
+
+% ==================== 答辩记录 ====================
+\newpage
+\thispagestyle{empty}
+\begin{center}
+  {\erhao\heiti 湖南科技大学}
+
+  \vspace{0.5cm}
+
+  {\xiaoerhao\heiti 毕业设计（论文）答辩记录}
+\end{center}
+
+\vspace{1cm}
+
+\noindent
+\begin{tabular}{ll}
+  日期： & \\[0.5cm]
+  学生： & 学号：\quad\quad\quad\quad 班级： \\[0.5cm]
+  题目： & \\[0.5cm]
+\end{tabular}
+
+\vspace{0.5cm}
+
+\noindent
+提交毕业设计（论文）答辩委员会下列材料：
+
+\vspace{0.5cm}
+
+\noindent
+\begin{tabular}{ll}
+  1 设计说明书/ 论 文 & 共\quad\quad 页 \\[0.3cm]
+  2 设计（论文）图 纸 & 共\quad\quad 页 \\[0.3cm]
+  3 指导人、评阅人评语 & 共\quad\quad 页 \\
+\end{tabular}
+
+\vspace{1cm}
+
+\noindent
+毕业设计（论文）答辩委员会评语：
+
+\vspace{0.5cm}
+
+\noindent
+[主要对学生毕业设计（论文）的研究思路，设计（论文）质量，文本图纸规范程度和对设计（论文）的介绍，回答问题情况等进行综合评价]
+
+\vspace{5cm}
+
+\noindent
+\begin{tabular}{ll}
+  答辩委员会主任： & （签名） \\[0.3cm]
+  委员： & （签名） \\[0.3cm]
+  & （签名） \\[0.3cm]
+  & （签名） \\[0.3cm]
+  & （签名） \\[0.5cm]
+  答辩成绩： & \\[0.5cm]
+  总评成绩： & \\
+\end{tabular}
+
+% 前置部分使用罗马数字页码
+\newpage
+\pagenumbering{roman}
+
+% ==================== 中文摘要 ====================
+\begin{cnabstract}
+（此处填写中文摘要内容，小四号宋体，1.25倍行距）
+
+\cnkeywords{关键词1；关键词2；关键词3；关键词4；关键词5}
+\end{cnabstract}
+
+% ==================== 英文摘要 ====================
+\begin{enabstract}
+(Abstract content in English, font size: 12pt, line spacing: 1.25)
+
+\enkeywords{Keyword1; Keyword2; Keyword3; Keyword4; Keyword5}
+\end{enabstract}
+
+% ==================== 目录 ====================
+\newpage
+\tableofcontents
+
+% 正文部分使用阿拉伯数字页码
+\newpage
+\pagenumbering{arabic}
+
+% ==================== 第一章 ====================
+\section{章标题}
+
+\subsection{节标题}
+
+正文内容（小四号宋体，1.25倍行距，首行缩进2字符）
+
+\subsubsection{条标题}
+
+正文内容
+
+% ==================== 第二章 ====================
+\section{章标题}
+
+\subsection{节标题}
+
+正文内容
+
+% ==================== 参考文献 ====================
+\newpage
+\begin{thebibliography}{99}
+\addcontentsline{toc}{section}{参考文献}
+
+\bibitem{ref1}
+作者. 文献题名[文献类型标识]. 出版地: 出版者, 出版年: 起止页码.
+
+\end{thebibliography}
+
+% ==================== 致谢 ====================
+\newpage
+\section*{致\quad 谢}
+\addcontentsline{toc}{section}{致谢}
+
+（此处填写致谢内容）
+
+% ==================== 附录 ====================
+\newpage
+\section*{附录A：附录标题}
+\addcontentsline{toc}{section}{附录A：附录标题}
+
+（此处填写附录内容）
+
+\end{document}

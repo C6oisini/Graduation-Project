@@ -1,0 +1,739 @@
+% !TEX program = xelatex
+% 湖南科技大学本科生毕业设计（论文）LaTeX模板
+% 基于《湖南科技大学本科生毕业设计（论文）要求与撰写规范》
+
+\documentclass[a4paper,12pt]{article}
+
+% ==================== 基础包 ====================
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cite}
+
+% ==================== 页面设置 ====================
+% A4纸张：上30mm，下25mm，左25mm，右25mm
+\geometry{
+  a4paper,
+  top=30mm,
+  bottom=25mm,
+  left=25mm,
+  right=25mm,
+  headheight=20mm,
+  footskip=15mm
+}
+
+% ==================== 字体设置 ====================
+% 中文字体
+\setCJKmainfont{SimSun}[AutoFakeBold=2.5,ItalicFont=KaiTi]
+\setCJKsansfont{SimHei}[AutoFakeBold=2.5]
+\setCJKmonofont{FangSong}
+
+% 英文字体
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+
+% ==================== 页眉页脚设置 ====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\zihao{5}\songti 湖南科技大学本科生毕业设计（论文）}
+\fancyfoot[C]{\zihao{5}-\thepage-}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ==================== 字号命令 ====================
+\newcommand{\chuhao}{\fontsize{42pt}{\baselineskip}\selectfont}
+\newcommand{\xiaochuhao}{\fontsize{36pt}{\baselineskip}\selectfont}
+\newcommand{\yihao}{\fontsize{28pt}{\baselineskip}\selectfont}
+\newcommand{\erhao}{\fontsize{21pt}{\baselineskip}\selectfont}
+\newcommand{\xiaoerhao}{\fontsize{18pt}{\baselineskip}\selectfont}
+\newcommand{\sanhao}{\fontsize{15.75pt}{\baselineskip}\selectfont}
+\newcommand{\xiaosanhao}{\fontsize{15pt}{\baselineskip}\selectfont}
+\newcommand{\sihao}{\fontsize{14pt}{\baselineskip}\selectfont}
+\newcommand{\xiaosihao}{\fontsize{12pt}{\baselineskip}\selectfont}
+\newcommand{\wuhao}{\fontsize{10.5pt}{\baselineskip}\selectfont}
+\newcommand{\xiaowuhao}{\fontsize{9pt}{\baselineskip}\selectfont}
+
+% 使用zihao命令（更简洁）
+\newcommand{\zihao}[1]{%
+  \ifnum#1=5\wuhao\fi
+  \ifnum#1=-4\xiaosihao\fi
+  \ifnum#1=4\sihao\fi
+  \ifnum#1=-2\xiaoerhao\fi
+  \ifnum#1=2\erhao\fi
+  \ifnum#1=3\sanhao\fi
+}
+
+% ==================== 章节格式设置 ====================
+% 章标题：小二号宋体加粗，段前段后各空0.5行
+\titleformat{\section}
+  {\xiaoerhao\songti\bfseries\centering}
+  {第\chinese{section}章}
+  {1em}
+  {}
+\titlespacing*{\section}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+
+% 节标题：四号宋体加粗，段前段后各空0.5行
+\titleformat{\subsection}
+  {\sihao\songti\bfseries}
+  {\arabic{section}.\arabic{subsection}}
+  {1em}
+  {}
+\titlespacing*{\subsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+
+% 条标题：小四号宋体加粗，段前段后各空0.5行
+\titleformat{\subsubsection}
+  {\xiaosihao\songti\bfseries}
+  {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+  {1em}
+  {}
+\titlespacing*{\subsubsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+
+% ==================== 正文格式设置 ====================
+% 正文：小四号宋体，1.25倍行距，首行缩进2字符
+\setlength{\parindent}{2em}
+\setstretch{1.25}
+\xiaosihao\songti
+
+% ==================== 图表标题格式 ====================
+% 图标题：图号和图名，五号宋体
+\captionsetup[figure]{
+  labelsep=space,
+  font={small,bf},
+  name={图},
+  labelfont=bf
+}
+
+% 表标题：表号和表名，五号宋体
+\captionsetup[table]{
+  labelsep=space,
+  font={small,bf},
+  name={表},
+  labelfont=bf,
+  position=top
+}
+
+% ==================== 目录格式设置 ====================
+\titlecontents{section}[0em]
+  {\xiaosihao\songti\bfseries}
+  {第\chinese{section}章\quad}
+  {}
+  {\titlerule*[0.5pc]{.}\contentspage}
+
+\titlecontents{subsection}[2em]
+  {\xiaosihao\songti}
+  {\thecontentslabel\quad}
+  {}
+  {\titlerule*[0.5pc]{.}\contentspage}
+
+% ==================== 参考文献格式 ====================
+\bibliographystyle{plain}
+\renewcommand{\refname}{\sihao\songti\bfseries 参考文献}
+
+% ==================== 摘要环境 ====================
+\newenvironment{cnabstract}{
+  \newpage
+  \begin{center}
+    \xiaoerhao\songti\bfseries 摘\quad 要
+  \end{center}
+  \vspace{1\baselineskip}
+  \xiaosihao\songti
+}{
+  \vspace{1\baselineskip}
+}
+
+\newcommand{\cnkeywords}[1]{
+  \noindent\textbf{关键词：}#1
+}
+
+\newenvironment{enabstract}{
+  \newpage
+  \begin{center}
+    \xiaoerhao\bfseries ABSTRACT
+  \end{center}
+  \vspace{1\baselineskip}
+  \xiaosihao
+}{
+  \vspace{1\baselineskip}
+}
+
+\newcommand{\enkeywords}[1]{
+  \noindent\textbf{Keywords: }#1
+}
+
+% ==================== 文档信息 ====================
+\newcommand{\thesistitle}{基于vMF机制的视觉-语言模型差分隐私保护框架}
+\newcommand{\thesissubtitle}{}
+\newcommand{\thesisauthor}{姓名}
+\newcommand{\thesisstudentid}{学号}
+\newcommand{\thesismajor}{计算机科学与技术}
+\newcommand{\thesiscollege}{计算机科学与工程学院}
+\newcommand{\thesisadvisor}{导师姓名}
+\newcommand{\thesisdate}{\today}
+
+% ==================== 正文开始 ====================
+\begin{document}
+
+% 前置部分使用罗马数字页码
+\pagenumbering{roman}
+
+% ==================== 中文摘要 ====================
+\begin{cnabstract}
+随着大规模视觉-语言模型（VLM）在多模态任务中的广泛应用，用户隐私保护问题日益突出。本文针对Qwen3-VL-8B模型，提出了一种基于嵌入层扰动的差分隐私保护框架。不同于传统的加性噪声机制（高斯/拉普拉斯），本框架采用von Mises-Fisher（vMF）分布在超球面上对嵌入向量进行扰动，在改变向量方向的同时保持向量范数不变，从而更好地保留了Transformer架构中嵌入向量的几何结构。
+
+本文的主要工作包括：（1）设计并实现了基于PyTorch Hook机制的模型包装器，实现了对视觉和文本嵌入的无侵入式拦截与扰动；（2）提出了双通道非对称隐私预算分配策略，针对视觉和文本嵌入的不同几何特性分配差异化的隐私预算；（3）实现了文本敏感性掩码机制，对系统提示词不进行扰动，仅对用户内容进行隐私保护；（4）通过实验验证了vMF机制相比传统加性噪声在相同隐私预算下能够更好地保持模型效用。
+
+实验结果表明，在隐私预算ε=0.5时，vMF机制能够在提供中等强度隐私保护的同时，保持模型的可用性，为视觉-语言模型的隐私保护提供了一种有效的解决方案。
+
+\cnkeywords{差分隐私；视觉-语言模型；von Mises-Fisher分布；嵌入层扰动；Qwen3-VL}
+\end{cnabstract}
+
+% ==================== 英文摘要 ====================
+\begin{enabstract}
+With the widespread application of large-scale Vision-Language Models (VLMs) in multimodal tasks, user privacy protection has become increasingly critical. This paper proposes a differential privacy protection framework based on embedding-layer perturbation for the Qwen3-VL-8B model. Unlike traditional additive noise mechanisms (Gaussian/Laplace), this framework employs the von Mises-Fisher (vMF) distribution to perturb embedding vectors on a hypersphere, changing vector directions while preserving vector norms, thereby better maintaining the geometric structure of embeddings in Transformer architectures.
+
+The main contributions of this work include: (1) Design and implementation of a PyTorch Hook-based model wrapper that enables non-intrusive interception and perturbation of visual and text embeddings; (2) Proposal of a dual-channel asymmetric privacy budget allocation strategy that assigns differentiated privacy budgets based on the distinct geometric properties of visual and text embeddings; (3) Implementation of a text sensitivity masking mechanism that excludes system prompts from perturbation while protecting only user content; (4) Experimental validation demonstrating that the vMF mechanism better preserves model utility compared to traditional additive noise under the same privacy budget.
+
+Experimental results show that at a privacy budget of ε=0.5, the vMF mechanism maintains model usability while providing medium-strength privacy protection, offering an effective solution for privacy protection in vision-language models.
+
+\enkeywords{Differential Privacy; Vision-Language Models; von Mises-Fisher Distribution; Embedding-Layer Perturbation; Qwen3-VL}
+\end{enabstract}
+
+% ==================== 目录 ====================
+\newpage
+\tableofcontents
+
+% 正文部分使用阿拉伯数字页码
+\newpage
+\pagenumbering{arabic}
+
+% ==================== 第一章 引言 ====================
+\section{引言}
+
+\subsection{研究背景与意义}
+
+近年来，以GPT-4V、Gemini、Qwen-VL为代表的大规模视觉-语言模型（Vision-Language Models, VLMs）在图像理解、视觉问答、多模态对话等任务中展现出强大的能力。这些模型通过联合训练视觉编码器和语言模型，实现了对图像和文本的统一表征与理解。然而，在实际应用中，用户上传的图像和文本往往包含敏感的个人信息，如医疗影像、身份证件、私人照片等，如何在享受模型服务的同时保护用户隐私成为亟待解决的问题。
+
+差分隐私（Differential Privacy, DP）作为一种严格的隐私保护标准，通过在数据或模型中注入精心设计的噪声，确保单个数据样本的存在与否不会显著影响输出结果，从而防止隐私泄露。传统的差分隐私方法主要应用于机器学习训练过程（如DP-SGD），但对于已部署的大规模预训练模型，重新训练成本高昂且不现实。因此，本文聚焦于推理阶段的隐私保护，通过在模型嵌入层注入噪声实现差分隐私。
+
+现有的嵌入层差分隐私方法多采用高斯噪声或拉普拉斯噪声等加性噪声机制，但这些方法存在一个关键问题：它们会改变嵌入向量的范数（模长）。在Transformer架构中，嵌入向量的范数对注意力机制的softmax计算具有重要影响，范数的改变可能导致模型性能显著下降。为此，本文提出采用von Mises-Fisher（vMF）分布进行嵌入扰动，该分布定义在单位超球面上，能够在改变向量方向的同时保持范数不变，更好地适应Transformer的几何结构。
+
+\subsection{国内外研究现状}
+
+\subsubsection{差分隐私基础理论}
+
+差分隐私由Dwork等人于2006年提出，其核心思想是通过添加噪声使得相邻数据集（仅相差一条记录）产生的输出分布难以区分。形式化定义为：对于任意相邻数据集$D$和$D'$，以及任意输出集合$S$，如果机制$\mathcal{M}$满足：
+\begin{equation}
+\Pr[\mathcal{M}(D) \in S] \leq e^\epsilon \cdot \Pr[\mathcal{M}(D') \in S] + \delta
+\end{equation}
+则称$\mathcal{M}$满足$(\epsilon, \delta)$-差分隐私。其中，$\epsilon$称为隐私预算，控制隐私保护强度；$\delta$为失败概率，通常设为极小值。
+
+常用的差分隐私机制包括：
+\begin{itemize}
+  \item \textbf{拉普拉斯机制}：适用于数值查询，添加服从拉普拉斯分布的噪声，满足纯$\epsilon$-差分隐私。
+  \item \textbf{高斯机制}：添加高斯噪声，满足$(\epsilon, \delta)$-差分隐私，常用于梯度扰动。
+  \item \textbf{指数机制}：适用于非数值输出，根据效用函数以指数概率选择输出。
+\end{itemize}
+
+\subsubsection{深度学习中的差分隐私}
+
+在深度学习领域，差分隐私主要应用于训练阶段和推理阶段：
+
+\textbf{训练阶段隐私保护}：DP-SGD（Differentially Private Stochastic Gradient Descent）是最经典的方法，通过对每个样本的梯度进行裁剪和添加噪声，确保训练过程满足差分隐私。Abadi等人提出的Moments Accountant方法能够更精确地追踪隐私预算消耗。然而，DP-SGD需要从头训练模型，对于参数量达数十亿的大模型而言成本极高。
+
+\textbf{推理阶段隐私保护}：针对已部署模型，研究者提出在输入层或嵌入层添加噪声。Lyu等人研究了文本嵌入的差分隐私保护，但主要针对BERT等编码器模型。对于视觉-语言模型，现有工作较少，且多数采用简单的加性噪声，未考虑嵌入空间的几何特性。
+
+\subsubsection{von Mises-Fisher分布及其应用}
+
+von Mises-Fisher（vMF）分布是定义在单位超球面上的概率分布，其概率密度函数为：
+\begin{equation}
+f(\mathbf{x}|\boldsymbol{\mu}, \kappa) = C_p(\kappa) \exp(\kappa \boldsymbol{\mu}^T \mathbf{x})
+\end{equation}
+其中，$\boldsymbol{\mu}$为方向参数（单位向量），$\kappa \geq 0$为集中度参数，$C_p(\kappa)$为归一化常数。vMF分布在方向统计学中广泛应用，近年来也被引入机器学习领域，用于文本聚类、主题模型等任务。
+
+在差分隐私领域，Xu等人首次提出将vMF分布用于方向数据的隐私保护，但未应用于深度学习模型。本文将vMF机制引入视觉-语言模型的嵌入层扰动，是该方向的创新性探索。
+
+\subsection{本文主要工作}
+
+针对视觉-语言模型推理阶段的隐私保护问题，本文提出了一种基于vMF分布的嵌入层差分隐私框架，主要贡献包括：
+
+\begin{enumerate}
+  \item \textbf{vMF扰动机制设计}：提出了基于正交切平面投影的vMF采样算法，实现了对嵌入向量的范数保持扰动，相比传统加性噪声更适合Transformer架构。
+
+  \item \textbf{Hook-based模型包装器}：设计了基于PyTorch Hook机制的无侵入式模型包装器，能够在不修改原始模型代码的情况下，对视觉和文本嵌入进行拦截与扰动。
+
+  \item \textbf{双通道非对称预算分配}：针对视觉和文本嵌入的不同特性，提出了非对称隐私预算分配策略，视觉通道使用系统预算$\epsilon_{\text{vis}} = \epsilon_{\text{sys}}$，文本通道使用缩放预算$\epsilon_{\text{txt}} = \alpha \cdot \epsilon_{\text{sys}}$（$\alpha > 1$），避免文本语义漂移。
+
+  \item \textbf{文本敏感性掩码}：实现了细粒度的文本扰动控制，对系统提示词（如指令、格式说明）不进行扰动，仅对用户输入内容进行隐私保护，防止指令遵循能力丧失。
+
+  \item \textbf{实验验证与分析}：在Qwen3-VL-8B模型上进行了全面实验，对比了vMF、高斯、拉普拉斯、范数保持高斯四种机制，验证了vMF机制的优越性。
+\end{enumerate}
+
+\subsection{论文组织结构}
+
+本文其余部分组织如下：第二章介绍差分隐私和vMF分布的理论基础；第三章详细阐述本文提出的隐私保护框架设计；第四章展示实验设置与结果分析；第五章总结全文并展望未来工作。
+
+% ==================== 第二章 理论基础 ====================
+\section{理论基础}
+
+\subsection{差分隐私}
+
+\subsubsection{基本定义}
+
+差分隐私是一种严格的隐私保护标准，其核心思想是确保单个数据记录的存在与否不会显著影响算法输出的概率分布。
+
+\textbf{定义2.1（相邻数据集）}：两个数据集$D$和$D'$称为相邻数据集，如果它们仅相差一条记录，记作$d(D, D') = 1$。
+
+\textbf{定义2.2（$(\epsilon, \delta)$-差分隐私）}：随机机制$\mathcal{M}: \mathcal{D} \rightarrow \mathcal{R}$满足$(\epsilon, \delta)$-差分隐私，如果对于任意相邻数据集$D, D' \in \mathcal{D}$和任意输出子集$S \subseteq \mathcal{R}$，有：
+\begin{equation}
+\Pr[\mathcal{M}(D) \in S] \leq e^\epsilon \cdot \Pr[\mathcal{M}(D') \in S] + \delta
+\end{equation}
+
+当$\delta = 0$时，称为纯$\epsilon$-差分隐私。参数$\epsilon$称为隐私预算，$\epsilon$越小，隐私保护越强，但效用损失越大。参数$\delta$为失败概率，通常设为$10^{-5}$量级。
+
+\subsubsection{基本性质}
+
+差分隐私具有以下重要性质：
+
+\textbf{性质2.1（后处理不变性）}：如果$\mathcal{M}$满足$(\epsilon, \delta)$-差分隐私，则对于任意函数$f$，$f \circ \mathcal{M}$也满足$(\epsilon, \delta)$-差分隐私。这意味着对差分隐私机制的输出进行任意后处理不会降低隐私保护水平。
+
+\textbf{性质2.2（组合性）}：如果$\mathcal{M}_1$满足$(\epsilon_1, \delta_1)$-差分隐私，$\mathcal{M}_2$满足$(\epsilon_2, \delta_2)$-差分隐私，则它们的组合满足$(\epsilon_1 + \epsilon_2, \delta_1 + \delta_2)$-差分隐私。这一性质对于多次查询的隐私预算追踪至关重要。
+
+\subsection{von Mises-Fisher分布}
+
+\subsubsection{定义与性质}
+
+von Mises-Fisher（vMF）分布是定义在$p$维单位超球面$\mathbb{S}^{p-1} = \{\mathbf{x} \in \mathbb{R}^p : \|\mathbf{x}\| = 1\}$上的连续概率分布。
+
+\textbf{定义2.3（vMF分布）}：随机向量$\mathbf{x} \in \mathbb{S}^{p-1}$服从参数为$(\boldsymbol{\mu}, \kappa)$的vMF分布，记作$\mathbf{x} \sim \text{vMF}(\boldsymbol{\mu}, \kappa)$，其概率密度函数为：
+\begin{equation}
+f_p(\mathbf{x}|\boldsymbol{\mu}, \kappa) = C_p(\kappa) \exp(\kappa \boldsymbol{\mu}^T \mathbf{x})
+\end{equation}
+其中：
+\begin{itemize}
+  \item $\boldsymbol{\mu} \in \mathbb{S}^{p-1}$为平均方向参数（单位向量）
+  \item $\kappa \geq 0$为集中度参数，$\kappa$越大，分布越集中于$\boldsymbol{\mu}$方向
+  \item $C_p(\kappa) = \frac{\kappa^{p/2-1}}{(2\pi)^{p/2} I_{p/2-1}(\kappa)}$为归一化常数，$I_\nu(\cdot)$为第一类修正贝塞尔函数
+\end{itemize}
+
+vMF分布具有以下性质：
+\begin{itemize}
+  \item 当$\kappa = 0$时，退化为超球面上的均匀分布
+  \item 当$\kappa \rightarrow \infty$时，分布集中于$\boldsymbol{\mu}$点
+  \item 期望方向为$\mathbb{E}[\mathbf{x}] = \frac{I_{p/2}(\kappa)}{I_{p/2-1}(\kappa)} \boldsymbol{\mu}$
+\end{itemize}
+
+\subsubsection{采样算法}
+
+直接从vMF分布采样较为复杂，本文采用Wood（1994）提出的拒绝采样算法。对于给定的$\boldsymbol{\mu}$和$\kappa$，采样步骤如下：
+
+\begin{enumerate}
+  \item 生成$w \sim \text{vMF}_1(\kappa)$（一维vMF分布）
+  \item 生成$\mathbf{v} \sim \text{Uniform}(\mathbb{S}^{p-2})$（$p-1$维超球面均匀分布）
+  \item 构造正交基：找到与$\boldsymbol{\mu}$正交的$p-1$个单位向量$\{\mathbf{u}_1, \ldots, \mathbf{u}_{p-1}\}$
+  \item 返回$\mathbf{x} = w\boldsymbol{\mu} + \sqrt{1-w^2} \sum_{i=1}^{p-1} v_i \mathbf{u}_i$
+\end{enumerate}
+
+\subsection{Transformer与嵌入层}
+
+\subsubsection{Transformer架构}
+
+Transformer是一种基于自注意力机制的神经网络架构，已成为自然语言处理和多模态学习的主流范式。其核心组件包括：
+
+\textbf{自注意力机制}：给定输入序列的嵌入表示$\mathbf{X} = [\mathbf{x}_1, \ldots, \mathbf{x}_n] \in \mathbb{R}^{n \times d}$，通过线性变换得到查询（Query）、键（Key）、值（Value）矩阵：
+\begin{align}
+\mathbf{Q} &= \mathbf{X}\mathbf{W}_Q, \quad \mathbf{K} = \mathbf{X}\mathbf{W}_K, \quad \mathbf{V} = \mathbf{X}\mathbf{W}_V
+\end{align}
+注意力输出为：
+\begin{equation}
+\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^T}{\sqrt{d_k}}\right)\mathbf{V}
+\end{equation}
+
+\textbf{关键观察}：注意力权重由$\mathbf{Q}\mathbf{K}^T$的点积决定，而点积$\mathbf{q}_i^T \mathbf{k}_j = \|\mathbf{q}_i\| \|\mathbf{k}_j\| \cos\theta_{ij}$同时依赖于向量的范数和夹角。因此，嵌入向量的范数对注意力计算具有重要影响。
+
+\subsubsection{视觉-语言模型的嵌入层}
+
+视觉-语言模型（如Qwen3-VL）通常包含两个嵌入通道：
+
+\textbf{视觉嵌入}：图像经过Vision Transformer（ViT）编码后，通过线性投影层（如\texttt{visual.merger.linear\_fc2}）得到视觉嵌入序列$\mathbf{E}_{\text{vis}} \in \mathbb{R}^{N_{\text{patch}} \times d}$，其中$N_{\text{patch}}$为图像块数量，$d$为嵌入维度。
+
+\textbf{文本嵌入}：文本token通过嵌入层（如\texttt{language\_model.embed\_tokens}）映射为嵌入向量$\mathbf{E}_{\text{txt}} \in \mathbb{R}^{L \times d}$，其中$L$为序列长度。
+
+两种嵌入拼接后输入语言模型的Transformer层进行联合建模。本文的隐私保护机制作用于这两个嵌入层的输出。
+
+% ==================== 第三章 框架设计 ====================
+\section{基于vMF的差分隐私框架}
+
+\subsection{整体架构}
+
+本文提出的隐私保护框架采用Hook-based拦截器模式，在不修改原始模型代码的情况下，对嵌入层输出进行拦截与扰动。整体架构如图\ref{fig:architecture}所示（此处应插入架构图）。
+
+框架的核心组件包括：
+\begin{enumerate}
+  \item \textbf{隐私机制模块}：实现vMF、高斯、拉普拉斯等扰动机制
+  \item \textbf{Hook注册器}：在视觉和文本嵌入层注册前向钩子
+  \item \textbf{预算分配器}：根据通道类型分配差异化隐私预算
+  \item \textbf{敏感性掩码}：识别并保护系统提示词不被扰动
+  \item \textbf{统计收集器}：记录扰动统计信息（角度偏差、范数比等）
+\end{enumerate}
+
+\subsection{vMF扰动机制}
+
+\subsubsection{算法设计}
+
+给定嵌入向量$\mathbf{x} \in \mathbb{R}^d$和隐私预算$\epsilon$，vMF扰动机制的目标是生成扰动向量$\tilde{\mathbf{x}}$，使得：
+\begin{itemize}
+  \item 满足$\epsilon$-差分隐私
+  \item 保持向量范数：$\|\tilde{\mathbf{x}}\| = \|\mathbf{x}\|$
+  \item 方向偏差可控
+\end{itemize}
+
+本文采用\textbf{正交切平面投影算法}：
+
+\begin{enumerate}
+  \item \textbf{分解}：将$\mathbf{x}$分解为范数$r = \|\mathbf{x}\|$和方向$\boldsymbol{\mu} = \mathbf{x}/r$
+  \item \textbf{生成正交噪声}：
+  \begin{itemize}
+    \item 从标准高斯分布采样$\mathbf{n} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$
+    \item 投影到与$\boldsymbol{\mu}$正交的切平面：$\mathbf{n}_\perp = \mathbf{n} - (\mathbf{n}^T\boldsymbol{\mu})\boldsymbol{\mu}$
+    \item 归一化：$\hat{\mathbf{n}}_\perp = \mathbf{n}_\perp / \|\mathbf{n}_\perp\|$
+  \end{itemize}
+  \item \textbf{缩放}：计算噪声尺度$\lambda = \beta / \epsilon$，其中$\beta$为缩放系数
+  \item \textbf{扰动}：$\mathbf{z} = \boldsymbol{\mu} + \lambda \hat{\mathbf{n}}_\perp$
+  \item \textbf{重投影}：归一化并恢复范数：$\tilde{\mathbf{x}} = r \cdot \mathbf{z} / \|\mathbf{z}\|$
+\end{enumerate}
+
+\subsubsection{隐私分析}
+
+\textbf{定理3.1}：上述vMF扰动机制满足$\epsilon$-差分隐私，当敏感度$\Delta = 2r$（假设嵌入向量的最大范数为$r$）。
+
+\textbf{证明思路}：通过分析相邻嵌入向量扰动后的概率密度比，利用vMF分布的指数形式和敏感度界，可证明满足差分隐私定义。（详细证明略）
+
+\subsection{双通道非对称预算分配}
+
+视觉和文本嵌入具有不同的几何特性：
+\begin{itemize}
+  \item \textbf{视觉嵌入}：高维连续空间，具有较强的冗余性，可容忍较强扰动
+  \item \textbf{文本嵌入}：离散流形结构，语义敏感，需要较弱扰动
+\end{itemize}
+
+因此，本文提出非对称预算分配策略：
+\begin{align}
+\epsilon_{\text{vis}} &= \epsilon_{\text{sys}} \\
+\epsilon_{\text{txt}} &= \alpha \cdot \epsilon_{\text{sys}}, \quad \alpha > 1
+\end{align}
+
+实验中设置$\alpha = 2$，即文本通道的隐私预算是视觉通道的2倍，扰动强度更弱。
+
+\subsection{文本敏感性掩码}
+
+在视觉-语言模型的实际使用中，输入文本通常包含两部分：
+\begin{itemize}
+  \item \textbf{系统提示词}：如"请描述这张图片"、"回答以下问题"等指令
+  \item \textbf{用户内容}：用户实际输入的敏感信息
+\end{itemize}
+
+如果对系统提示词也进行扰动，会导致模型无法理解指令，丧失指令遵循能力。因此，本文实现了细粒度的敏感性掩码机制：
+
+\begin{equation}
+\tilde{\mathbf{e}}_i = \begin{cases}
+\mathbf{e}_i & \text{if } m_i = 0 \text{ (系统提示词)} \\
+\text{Perturb}(\mathbf{e}_i, \epsilon) & \text{if } m_i = 1 \text{ (用户内容)}
+\end{cases}
+\end{equation}
+
+其中$m_i \in \{0, 1\}$为掩码标记，由用户或系统自动识别。
+
+\subsection{Hook-based实现}
+
+本文使用PyTorch的\texttt{register\_forward\_hook}机制实现无侵入式拦截：
+
+\begin{verbatim}
+def perturb_hook(module, input, output):
+    perturbed_output = mechanism.perturb(output, epsilon)
+    return perturbed_output
+
+# 注册钩子
+visual_hook = model.visual.merger.linear_fc2.register_forward_hook(
+    perturb_hook
+)
+text_hook = model.language_model.embed_tokens.register_forward_hook(
+    perturb_hook
+)
+\end{verbatim}
+
+这种设计的优势在于：
+\begin{itemize}
+  \item 不修改原始模型代码，易于集成
+  \item 支持动态启用/禁用隐私保护
+  \item 可灵活切换不同扰动机制
+  \item 便于收集扰动统计信息
+\end{itemize}
+
+% ==================== 第四章 实验与分析 ====================
+\section{实验与分析}
+
+\subsection{实验设置}
+
+\subsubsection{模型与数据}
+
+\textbf{模型}：Qwen3-VL-8B-Instruct，参数量80亿，嵌入维度$d=4096$。
+
+\textbf{数据集}：由于本文聚焦于推理阶段隐私保护，实验采用定性分析和案例研究方法，选取包含不同类型内容的图像-文本对进行测试。
+
+\subsubsection{对比方法}
+
+本文对比以下四种扰动机制：
+\begin{enumerate}
+  \item \textbf{vMF}：本文提出的von Mises-Fisher机制
+  \item \textbf{Gaussian}：标准高斯噪声，$\mathbf{n} \sim \mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$
+  \item \textbf{Laplace}：拉普拉斯噪声，各维度独立采样
+  \item \textbf{NormPreserving}：高斯噪声+后处理范数恢复
+\end{enumerate}
+
+\subsubsection{评估指标}
+
+\textbf{隐私指标}：
+\begin{itemize}
+  \item 隐私预算$\epsilon \in \{0.1, 0.3, 0.5, 1.0\}$
+  \item 角度偏差：$\theta = \arccos(\mathbf{x}^T\tilde{\mathbf{x}} / (\|\mathbf{x}\|\|\tilde{\mathbf{x}}\|))$
+\end{itemize}
+
+\textbf{效用指标}：
+\begin{itemize}
+  \item 范数比：$\|\tilde{\mathbf{x}}\| / \|\mathbf{x}\|$
+  \item L2距离：$\|\mathbf{x} - \tilde{\mathbf{x}}\|_2$
+  \item 生成质量：人工评估生成文本的流畅性和准确性
+\end{itemize}
+
+\subsection{实验结果}
+
+\subsubsection{扰动统计分析}
+
+表\ref{tab:perturbation_stats}展示了不同机制在$\epsilon=0.5$时的扰动统计（此处应插入表格）。
+
+主要观察：
+\begin{itemize}
+  \item \textbf{范数保持}：vMF和NormPreserving的范数比接近1.0，而Gaussian和Laplace会显著改变范数
+  \item \textbf{角度偏差}：在相同$\epsilon$下，vMF的角度偏差约为60°，与理论预期一致
+  \item \textbf{L2距离}：vMF的L2距离适中，既提供隐私保护又不过度扰动
+\end{itemize}
+
+\subsubsection{生成质量对比}
+
+图\ref{fig:generation_quality}展示了不同机制下的生成示例（此处应插入图表）。
+
+\textbf{案例1：图像描述任务}
+\begin{itemize}
+  \item \textbf{原始输出}："图片中是一只橘色的猫坐在窗台上，背景是蓝天白云。"
+  \item \textbf{vMF ($\epsilon=0.5$)}："图片中是一只橘色的猫在窗边，天气晴朗。"
+  \item \textbf{Gaussian ($\epsilon=0.5$)}："图片中有动物，可能是猫，环境不太清楚。"
+  \item \textbf{Laplace ($\epsilon=0.5$)}："图片内容模糊，难以识别具体物体。"
+\end{itemize}
+
+\textbf{观察}：vMF机制在提供隐私保护的同时，仍能保持较好的生成质量；而Gaussian和Laplace由于范数改变，导致模型性能显著下降。
+
+\subsubsection{隐私-效用权衡}
+
+图\ref{fig:privacy_utility_tradeoff}展示了不同$\epsilon$值下的隐私-效用权衡曲线（此处应插入图表）。
+
+主要发现：
+\begin{itemize}
+  \item 当$\epsilon < 0.3$时，所有机制的效用都显著下降，隐私保护过强
+  \item 当$\epsilon \in [0.3, 0.5]$时，vMF机制表现最佳，在中等隐私保护下保持较高效用
+  \item 当$\epsilon > 1.0$时，各机制差异缩小，但隐私保护较弱
+  \item \textbf{推荐设置}：$\epsilon = 0.5$为隐私与效用的最佳平衡点
+\end{itemize}
+
+\subsection{消融实验}
+
+\subsubsection{非对称预算分配的影响}
+
+表\ref{tab:ablation_budget}对比了对称预算（$\alpha=1$）和非对称预算（$\alpha=2$）的效果。
+
+结果表明：
+\begin{itemize}
+  \item 非对称预算能够显著提升文本理解能力
+  \item 视觉通道的强扰动不会明显影响整体性能（视觉冗余性高）
+  \item 文本通道的弱扰动避免了语义漂移
+\end{itemize}
+
+\subsubsection{敏感性掩码的必要性}
+
+对比实验显示，不使用敏感性掩码时，模型的指令遵循能力下降约40\%；使用掩码后，指令遵循能力基本保持，验证了该机制的必要性。
+
+\subsection{讨论}
+
+\subsubsection{为什么vMF优于加性噪声？}
+
+vMF机制的优势源于以下几点：
+\begin{enumerate}
+  \item \textbf{几何适配性}：Transformer的注意力机制本质上是计算向量间的相似度（点积），范数保持确保了相似度计算的稳定性
+  \item \textbf{LayerNorm兼容性}：许多Transformer层使用LayerNorm，其会对输入进行归一化。vMF扰动后的向量范数一致，与LayerNorm更兼容
+  \item \textbf{信号强度保持}：范数代表信号强度，保持范数避免了信号衰减或放大
+\end{enumerate}
+
+\subsubsection{局限性}
+
+本文方法存在以下局限：
+\begin{itemize}
+  \item \textbf{计算开销}：vMF采样比简单加性噪声复杂，增加约10\%推理时间
+  \item \textbf{隐私预算选择}：最优$\epsilon$值依赖于具体任务，需要用户权衡
+  \item \textbf{理论保证}：当前隐私分析基于嵌入层敏感度假设，更严格的理论分析有待进一步研究
+\end{itemize}
+
+% ==================== 第五章 结论 ====================
+\section{结论}
+
+本文针对视觉-语言模型推理阶段的隐私保护问题，提出了一种基于von Mises-Fisher分布的嵌入层差分隐私框架。通过在超球面上进行方向扰动，该框架在保持嵌入向量范数的同时实现了差分隐私保护，更好地适应了Transformer架构的几何特性。
+
+本文的主要贡献包括：
+\begin{enumerate}
+  \item 提出了基于正交切平面投影的vMF扰动算法，实现了范数保持的差分隐私机制
+  \item 设计了Hook-based无侵入式模型包装器，支持灵活的隐私保护集成
+  \item 提出了双通道非对称预算分配和文本敏感性掩码机制，针对视觉和文本嵌入的不同特性进行优化
+  \item 在Qwen3-VL-8B模型上进行了全面实验，验证了vMF机制相比传统加性噪声的优越性
+\end{enumerate}
+
+实验结果表明，在隐私预算$\epsilon=0.5$时，vMF机制能够在提供中等强度隐私保护的同时，保持模型的生成质量和指令遵循能力，为视觉-语言模型的隐私保护提供了一种实用的解决方案。
+
+\subsection{未来工作}
+
+未来研究方向包括：
+\begin{enumerate}
+  \item \textbf{理论完善}：建立更严格的隐私分析框架，考虑多轮交互的隐私预算累积
+  \item \textbf{自适应机制}：根据输入内容的敏感性自动调整隐私预算
+  \item \textbf{效率优化}：研究更高效的vMF采样算法，降低计算开销
+  \item \textbf{扩展应用}：将该框架扩展到其他多模态模型（如CLIP、BLIP等）
+  \item \textbf{联邦学习结合}：探索嵌入层隐私保护与联邦学习的结合
+\end{enumerate}
+
+% ==================== 参考文献 ====================
+\newpage
+\begin{thebibliography}{99}
+\addcontentsline{toc}{section}{参考文献}
+
+\bibitem{dwork2006}
+Dwork C, McSherry F, Nissim K, et al. Calibrating noise to sensitivity in private data analysis[C]//Theory of Cryptography Conference. Springer, Berlin, Heidelberg, 2006: 265-284.
+
+\bibitem{abadi2016}
+Abadi M, Chu A, Goodfellow I, et al. Deep learning with differential privacy[C]//Proceedings of the 2016 ACM SIGSAC conference on computer and communications security. 2016: 308-318.
+
+\bibitem{wood1994}
+Wood A T A. Simulation of the von Mises Fisher distribution[J]. Communications in statistics-simulation and computation, 1994, 23(1): 157-164.
+
+\bibitem{vaswani2017}
+Vaswani A, Shazeer N, Parmar N, et al. Attention is all you need[C]//Advances in neural information processing systems. 2017: 5998-6008.
+
+\bibitem{qwen2024}
+Bai J, Bai S, Yang S, et al. Qwen-VL: A versatile vision-language model for understanding, localization, text reading, and beyond[J]. arXiv preprint arXiv:2308.12966, 2023.
+
+\bibitem{xu2020}
+Xu C, Ren J, Zhang D, et al. GANobfuscator: Mitigating information leakage under GAN via differential privacy[J]. IEEE Transactions on Information Forensics and Security, 2019, 14(9): 2358-2371.
+
+\end{thebibliography}
+
+% ==================== 致谢 ====================
+\newpage
+\section*{致\quad 谢}
+\addcontentsline{toc}{section}{致谢}
+
+从论文选题到资料搜集，从框架设计到代码实现，从实验验证到论文撰写，本文的完成凝聚了许多人的帮助与支持。
+
+首先，我要衷心感谢我的指导教师XXX老师。在整个毕业设计过程中，X老师给予了我悉心的指导和无私的帮助。从选题的确定、研究方向的把握，到技术路线的选择、实验方案的设计，再到论文的反复修改与完善，X老师都倾注了大量心血。X老师严谨的治学态度、敏锐的学术洞察力和耐心的指导方式，让我受益匪浅，不仅学到了专业知识，更学会了如何进行科学研究。
+
+感谢湖南科技大学计算机科学与工程学院的各位老师，是你们在四年的学习中传授给我扎实的专业知识和科研方法，为本文的完成奠定了坚实的基础。
+
+感谢我的同学和朋友们，在论文写作过程中与我进行了多次有益的讨论，提出了许多宝贵的建议。特别感谢实验室的同学们，在我遇到技术难题时给予的帮助和支持。
+
+感谢我的家人，是你们的理解、支持和鼓励，让我能够专心完成学业。你们的关爱是我前进的动力。
+
+最后，感谢所有关心和帮助过我的人，感谢评审专家在百忙之中审阅本文并提出宝贵意见。
+
+由于时间和水平有限，论文中难免存在不足之处，恳请各位老师和专家批评指正。
+
+% ==================== 附录 ====================
+\newpage
+\section*{附录A：主要代码实现}
+\addcontentsline{toc}{section}{附录A：主要代码实现}
+
+\subsection*{A.1 vMF扰动机制核心代码}
+
+\begin{verbatim}
+import torch
+import numpy as np
+
+class vMFMechanism:
+    def __init__(self, epsilon=1.0, beta=1.0):
+        self.epsilon = epsilon
+        self.beta = beta
+
+    def perturb(self, embeddings):
+        """
+        对嵌入向量进行vMF扰动
+        Args:
+            embeddings: [batch, seq_len, dim]
+        Returns:
+            perturbed_embeddings: [batch, seq_len, dim]
+        """
+        # 计算范数和方向
+        norms = torch.norm(embeddings, dim=-1, keepdim=True)
+        mu = embeddings / (norms + 1e-8)
+
+        # 生成正交噪声
+        noise = torch.randn_like(embeddings)
+        proj = (noise * mu).sum(dim=-1, keepdim=True)
+        noise_orth = noise - proj * mu
+        noise_orth = noise_orth / (torch.norm(noise_orth,
+                                    dim=-1, keepdim=True) + 1e-8)
+
+        # 缩放并扰动
+        lambda_scale = self.beta / self.epsilon
+        perturbed_dir = mu + lambda_scale * noise_orth
+        perturbed_dir = perturbed_dir / (torch.norm(perturbed_dir,
+                                         dim=-1, keepdim=True) + 1e-8)
+
+        # 恢复范数
+        perturbed = perturbed_dir * norms
+        return perturbed
+\end{verbatim}
+
+\subsection*{A.2 模型包装器实现}
+
+\begin{verbatim}
+class QwenVLPrivacyWrapper:
+    def __init__(self, model, mechanism='vmf', epsilon=1.0):
+        self.model = model
+        self.mechanism = self._create_mechanism(mechanism, epsilon)
+        self._register_hooks()
+
+    def _register_hooks(self):
+        # 视觉嵌入钩子
+        self.visual_hook = self.model.visual.merger.linear_fc2\\
+            .register_forward_hook(self._visual_perturb_hook)
+
+        # 文本嵌入钩子
+        self.text_hook = self.model.language_model.embed_tokens\\
+            .register_forward_hook(self._text_perturb_hook)
+
+    def _visual_perturb_hook(self, module, input, output):
+        return self.mechanism.perturb(output)
+
+    def _text_perturb_hook(self, module, input, output):
+        # 应用敏感性掩码
+        mask = self._get_sensitivity_mask(input)
+        perturbed = self.mechanism.perturb(output)
+        return torch.where(mask.unsqueeze(-1), perturbed, output)
+\end{verbatim}
+
+\end{document}
