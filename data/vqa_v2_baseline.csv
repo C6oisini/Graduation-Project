@@ -1,0 +1,2 @@
+method,Accuracy,Accuracy_std,F1,F1_std,SSIM,SSIM_std,AttackSuccessRate,AttackSuccessRate_std
+No-Privacy,79.2,0.4,81.9,0.5,0.901,0.007,0.935,0.009

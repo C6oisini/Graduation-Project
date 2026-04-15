@@ -1,0 +1,7 @@
+epsilon,method,Accuracy,AttackSuccessRate
+0.1,Laplace,55.4,0.224
+0.1,vMF-Ours,59.8,0.195
+0.5,Laplace,64.2,0.385
+0.5,vMF-Ours,68.5,0.342
+1.0,Laplace,69.5,0.492
+1.0,vMF-Ours,72.4,0.448

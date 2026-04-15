@@ -1,0 +1,11 @@
+mechanism,epsilon,norm_mean,norm_std,cosine_similarity
+None,0.0,1.000,0.000,1.000
+vMF(Ours),0.1,1.000,0.000,0.342
+vMF(Ours),0.5,1.000,0.000,0.685
+vMF(Ours),1.0,1.000,0.000,0.854
+Laplace,0.1,1.245,0.182,0.315
+Laplace,0.5,1.084,0.095,0.652
+Laplace,1.0,1.042,0.048,0.824
+Gaussian,0.1,1.192,0.154,0.328
+Gaussian,0.5,1.062,0.078,0.664
+Gaussian,1.0,1.031,0.035,0.832

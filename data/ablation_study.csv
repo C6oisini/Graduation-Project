@@ -1,0 +1,10 @@
+epsilon,setting,CIDEr,CLIPScore,AttackSuccessRate
+0.1,Visual-Only,85.2,0.684,0.312
+0.1,Text-Only,88.7,0.712,0.425
+0.1,Both-vMF(Ours),80.4,0.642,0.182
+0.5,Visual-Only,94.1,0.756,0.485
+0.5,Text-Only,96.3,0.784,0.562
+0.5,Both-vMF(Ours),92.6,0.724,0.324
+1.0,Visual-Only,97.8,0.785,0.592
+1.0,Text-Only,98.5,0.802,0.645
+1.0,Both-vMF(Ours),96.8,0.748,0.418
