@@ -6,9 +6,44 @@
 
 ---
 
-## 1. 前置知识 (Prerequisites)
+## 1. 前置知识与问题定义 (Prerequisites and Problem Definition)
 
-（略，保持前文内容）
+### 1.1 视觉语言模型 (VLM) 的几何特性：以 Qwen-VL 为例
+视觉语言模型的核心在于将跨模态信息映射至统一的语义表征空间。以 Qwen-VL-8B 为例，其处理流程不仅是数据的传递，更是几何结构的演变：
+
+#### 1.1.1 视觉特征的生成与对齐
+1.  **ViT 编码器**: 图像 $I$ 被切分为 Patch，经 Transformer 层计算。各层内部的自注意力机制公式为：
+    $$\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}$$
+    其中点积项 $\mathbf{q}_i^\top \mathbf{k}_j = \|\mathbf{q}_i\| \|\mathbf{k}_j\| \cos\theta_{ij}$ 表明，模型对权重的判定极度依赖于 Embedding 向量间的**夹角 $\theta$**。
+2.  **Smash Data 的产生**: 在拆分推理（Split Inference）中，视觉编码器输出的中间表征被称为“Smash Data”。由于 Projector 层的线性映射性质，这些向量完整保留了图像的拓扑结构信息。
+
+#### 1.1.2 语义流形假设
+在 $d=4096$ 的超高维空间中，有效的语义特征并非均匀分布，而是集中在低维的**语义流形（Semantic Manifold）**上。由于 `LayerNorm` 的存在，这些特征被自然地约束在超球面的局部区域。这意味着，任何偏离超球面切空间的扰动都可能导致语义的灾难性丢失。
+
+### 1.2 隐私保护理论：从 DP 到度量隐私
+
+#### 1.2.1 本地差分隐私 (LDP) 的局限性
+传统的本地差分隐私要求任意两个输入 $x, x'$ 产生的输出分布必须不可区分。这在 Embedding 空间会导致两个语义完全无关的向量被迫产生相似输出，造成巨大的效用损失。
+
+#### 1.2.2 度量隐私 (Metric Privacy) 与几何感知
+度量隐私（又称 $d_{\mathcal{X}}$-privacy）是对 DP 的泛化。其核心在于引入度量距离 $d(\cdot, \cdot)$：
+$$\frac{\Pr[\mathcal{M}(x) \in S]}{\Pr[\mathcal{M}(x') \in S]} \le \exp(\epsilon \cdot d(x, x'))$$
+- **优势**: 这种“距离感知”的特性允许模型在保护微观细节（小 $d$）的同时，保留宏观语义（大 $d$）。
+- **应用**: 对于 VLM，我们采用测地线距离作为 $d$，将隐私预算直接映射到超球面的几何偏转上。
+
+### 1.3 威胁模型与特征反演攻击定义
+
+#### 1.3.1 诚实但好奇的云端节点
+本研究设定的攻击者为云端推理服务器。其具备以下能力：
+- **白盒背景**: 了解对齐层（Projector）的权重。
+- **计算资源**: 拥有训练强大的逆向解码器（Inversion Decoder）所需的算力。
+
+#### 1.3.2 特征反演攻击的形式化
+攻击者的目标是找到一张伪造图像 $\hat{I}$，使其生成的扰动特征与截获的 $y$ 尽可能接近。其优化目标可表示为：
+$$\min_{\hat{I}} \mathcal{L}_{\text{inv}} = \|\Phi_{\text{enc}}(\hat{I}) - y\|_2^2 + \lambda \mathcal{R}(\hat{I})$$
+其中 $\Phi_{\text{enc}}$ 为端侧编码器，$\mathcal{R}$ 为图像先验正则项（如 TV 损失）。
+
+**本研究的防御目标**: 通过 vMF 扰动增加该优化问题的非凸性与解空间的不确定性，使得 $\hat{I}$ 在视觉上与原图 $I$ 的 SSIM 降至最低，同时不干扰下游 LLM 的 `softmax` 激活分布。
 
 ---
 
@@ -38,8 +73,8 @@ $$d_\varepsilon(\mathbf{x}, \mathbf{x}') = \varepsilon \cdot \arccos\left(\frac{
 5.  **范数恢复**: 最终输出 $\mathbf{y} = r \cdot \boldsymbol{\mu}'$。
 
 #### 2.2.2 偏转角度理论值
-该机制产生的偏转角 $\theta$ 具有确定性：
-$$\theta = \arccos\left(\frac{1}{\sqrt{1 + \lambda^2}}\right) = \arctan(\lambda) = \arctan\left(\frac{\beta}{\varepsilon}\right)$$
+该机制产生的偏转角 $\theta$ 具有确定性。在 Word 公式编辑器中可直接使用以下 LaTeX 形式：
+$$\theta = \arccos\left(\frac{1}{\sqrt{1 + \lambda^2}}\right) = \arctan(\lambda) = \arctan\left(\frac{\beta}{\epsilon}\right)$$
 
 ### 2.3 隐私性证明概要
 
@@ -60,6 +95,26 @@ $$\Pr[\mathcal{M}(\mathbf{x}) \in S] \le e^{\kappa^* \cdot d_{\text{geo}}(\bolds
 **定理 2.3**: 对独立扰动的向量 $\mathbf{y}_1, \mathbf{y}_2$，其点积期望满足：
 $$\mathbb{E}[\mathbf{y}_1^\top \mathbf{y}_2] = \cos^2\theta \cdot \mathbf{x}_1^\top \mathbf{x}_2$$
 这意味着注意力权重的相对排序（Rank）在期望下得以保持，从而在强隐私约束下依然能维持模型生成的逻辑连贯性。
+
+### 2.5 多模态非对称预算分配与掩码机制
+
+#### 2.5.1 模态异构性分析
+在 Qwen-VL 等多模态模型中，视觉与文本嵌入表现出显著的几何差异：
+1.  **视觉嵌入 (Visual Embeddings)**: 具有高度冗余性。由于自然图像的局部相关性，相邻 Patch 的特征向量高度相似，能够承受较大规模的角度偏转。
+2.  **文本嵌入 (Text Embeddings)**: 具有极高的离散性。每个 Token（词元）均携带独立的语义信息，极小的方向偏转就可能导致 Token 从“猫”漂移到语义无关的“电视”。
+
+#### 2.5.2 非对称隐私预算分配策略
+针对上述异构性，本研究提出一种非对称分配策略。设定系统总隐私预算为 $\epsilon_{\text{sys}}$，引入非对称因子 $\alpha > 1$：
+$$\epsilon(\text{modality}) = \begin{cases} \epsilon_{\text{sys}}, & \text{Visual} \\ \alpha \cdot \epsilon_{\text{sys}}, & \text{Text} \end{cases}$$
+对应的扰动幅度 $\lambda$ 为：
+$$\lambda(\text{modality}) = \begin{cases} \beta/\epsilon_{\text{sys}}, & \text{Visual} \\ \beta/(\alpha \cdot \epsilon_{\text{sys}}), & \text{Text} \end{cases}$$
+该策略优先保障了文本指令的精确性，同时在视觉通道实施更强的保护。
+
+#### 2.5.3 敏感区掩码保护 (Sensitive Masking)
+在 VLM 的多轮对话中，并非所有 Embedding 都包含用户隐私（如系统指令、任务模板）。本研究引入掩码矩阵 $\mathbf{M} \in \{0,1\}^L$，实现精准保护：
+$$\mathbf{y}_{\text{final}} = \mathbf{M} \odot \mathbf{y}_{\text{perturbed}} + (1-\mathbf{M}) \odot \mathbf{x}_{\text{original}}$$
+- 当 $M_i = 0$ 时（如 "Describe this image:" 等系统提示），保持原值不变，确保模型指令遵循能力不下降。
+- 当 $M_i = 1$ 时（如用户输入的具体内容），应用 vMF 扰动，实现端到端的隐私屏障。
 
 ---
 
