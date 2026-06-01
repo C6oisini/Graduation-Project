@@ -1,2 +1,0 @@
-method,CIDEr,CIDEr_std,CLIPScore,CLIPScore_std,SSIM,SSIM_std,AttackSuccessRate,AttackSuccessRate_std
-No-Privacy,117.9,1.1,0.834,0.006,0.908,0.008,0.941,0.011

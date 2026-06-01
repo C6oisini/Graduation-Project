@@ -12,3 +12,6 @@ wheels/
 CLAUDE.md
 
 .claude/
+
+# Local datasets
+data/
