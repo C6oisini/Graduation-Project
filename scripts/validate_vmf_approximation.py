@@ -7,15 +7,10 @@ Generates a 3x2 validation plot + console statistical test results.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
 from scipy import stats
 import os
 
-# -- Global Style --
-rcParams['font.family'] = 'DejaVu Sans'
-rcParams['axes.unicode_minus'] = False
-rcParams['figure.dpi'] = 150
-rcParams['mathtext.fontset'] = 'cm'
+from plot_style import apply_plot_style, style_axis
 
 COLOR_TP = '#2563EB'
 COLOR_VMF = '#DC2626'
@@ -107,9 +102,14 @@ def plot_angle_distribution(ax):
     bins = np.linspace(0, max(max(angles_tp), max(angles_vmf)) * 1.05, 60)
     ax.hist(angles_tp, bins=bins, alpha=0.6, color=COLOR_TP, density=True, label=fr'Tangent Plane ($\mu$={np.mean(angles_tp):.2f}$^\circ$)')
     ax.hist(angles_vmf, bins=bins, alpha=0.6, color=COLOR_VMF, density=True, label=fr'True vMF ($\mu$={np.mean(angles_vmf):.2f}$^\circ$)')
+    lower = min(np.percentile(angles_tp, 0.5), np.percentile(angles_vmf, 0.5)) - 1.5
+    upper = max(np.percentile(angles_tp, 99.5), np.percentile(angles_vmf, 99.5)) + 1.5
+    ax.set_xlim(lower, upper)
     ax.set_xlabel('Angular Deviation (deg)')
+    ax.set_ylabel('Density')
     ax.set_title(fr'(a) Angular Deviation (d={d}, $\epsilon$={eps})', fontweight='bold')
-    ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=8, framealpha=0.9)
+    style_axis(ax)
 
 def plot_isotropy(ax):
     np.random.seed(123)
@@ -121,17 +121,21 @@ def plot_isotropy(ax):
     fig = ax.figure; pos = ax.get_position(); ax.remove()
     ax_polar = fig.add_axes(pos, projection='polar')
     ax_polar.bar(bin_centers, counts, width=2*np.pi/60, alpha=0.7, color=COLOR_TP)
-    ax_polar.set_title(fr'(b) Isotropy (d={d}, $\epsilon$={eps})', fontweight='bold', pad=15)
+    ax_polar.set_title(fr'(b) Isotropy (d={d}, $\epsilon$={eps})', fontweight='bold', pad=18)
+    ax_polar.tick_params(pad=6)
 
 def plot_dimension_scaling(ax):
     np.random.seed(456); eps = 1.0; dims = [8, 32, 128, 512, 1024]
     tp_theory = [np.degrees(np.arctan(1.0/eps))]*len(dims)
     vmf_theory = [np.degrees(np.arccos(vmf_mean_cosine_theory(kappa_from_epsilon(eps, d), d))) for d in dims]
-    ax.semilogx(dims, tp_theory, 's--', color=COLOR_TP, label='TP Theory')
-    ax.semilogx(dims, vmf_theory, '^--', color=COLOR_VMF, label='vMF Theory')
+    ax.semilogx(dims, tp_theory, 's--', color=COLOR_TP, linewidth=2.0, markersize=6, label='TP Theory')
+    ax.semilogx(dims, vmf_theory, '^--', color=COLOR_VMF, linewidth=2.0, markersize=6, label='vMF Theory')
     ax.set_xlabel('Dimension d'); ax.set_ylabel('Mean Angle (deg)')
     ax.set_title(fr'(c) Dimension Scaling ($\epsilon$={eps})', fontweight='bold')
-    ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
+    ax.set_ylim(44.2, 45.8)
+    ax.ticklabel_format(axis='y', style='plain', useOffset=False)
+    ax.legend(fontsize=8, framealpha=0.9)
+    style_axis(ax)
 
 def plot_norm_preservation(ax):
     np.random.seed(789); d, eps, n_samples = 512, 0.5, 1000
@@ -142,11 +146,22 @@ def plot_norm_preservation(ax):
         [np.linalg.norm(laplace_perturb(mu, eps))/10.0 for _ in range(n_samples)],
         [np.linalg.norm(norm_preserving_gaussian_perturb(mu, eps))/10.0 for _ in range(n_samples)]
     ]
-    ax.violinplot(data, showmeans=True)
-    ax.axhline(1.0, color='red', linestyle='--')
+    parts = ax.violinplot(data, showmeans=True, widths=0.72)
+    for body, color in zip(parts['bodies'], [COLOR_TP, COLOR_GAUSS, COLOR_LAP, COLOR_NP]):
+        body.set_facecolor(color)
+        body.set_edgecolor('#374151')
+        body.set_alpha(0.58)
+    for key in ['cbars', 'cmins', 'cmaxes', 'cmeans']:
+        parts[key].set_edgecolor('#111827')
+        parts[key].set_linewidth(1.0)
+    ax.axhline(1.0, color='#DC2626', linestyle='--', linewidth=1.5, label='Original Norm')
     ax.set_xticks(range(1, 5)); ax.set_xticklabels(['vMF', 'Gauss', 'Lap', 'NP-G'], fontsize=8)
+    ax.set_yscale('log')
+    ax.set_ylim(0.75, 380)
+    ax.set_ylabel('Relative Norm (log scale)')
     ax.set_title(fr'(d) Norm Preservation (d={d})', fontweight='bold')
-    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper left', fontsize=8, framealpha=0.9)
+    style_axis(ax, grid_axis="y")
 
 def plot_concentration_equivalence(ax):
     d = 512; epsilons = np.linspace(0.1, 5.0, 50)
@@ -156,7 +171,8 @@ def plot_concentration_equivalence(ax):
     ax.plot(epsilons, cos_vmf, '--', color=COLOR_VMF, label='vMF Theory')
     ax.set_xlabel(r'Privacy Budget $\epsilon$'); ax.set_ylabel('Mean Cosine')
     ax.set_title(fr'(e) Concentration Equivalence (d={d})', fontweight='bold')
-    ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=8, framealpha=0.9)
+    style_axis(ax)
 
 def plot_qq(ax):
     np.random.seed(202); d, eps, n_samples = 512, 0.5, 5000
@@ -169,20 +185,21 @@ def plot_qq(ax):
     ax.plot([-0.1, 0.1], [-0.1, 0.1], 'r--')
     ax.set_xlabel('vMF Quantiles'); ax.set_ylabel('TP Quantiles')
     ax.set_title(fr'(f) Projection QQ Plot (d={d})', fontweight='bold')
-    ax.grid(True, alpha=0.3)
+    style_axis(ax)
 
 if __name__ == '__main__':
-    fig = plt.figure(figsize=(16, 12))
-    fig.suptitle('Validation of vMF Tangent Plane Approximation', fontsize=15, fontweight='bold', y=0.98)
+    apply_plot_style()
+    fig = plt.figure(figsize=(17, 13))
+    fig.suptitle('Validation of vMF Tangent Plane Approximation', fontsize=18, fontweight='bold', y=0.985)
     plot_angle_distribution(fig.add_subplot(3, 2, 1))
     plot_isotropy(fig.add_subplot(3, 2, 2))
     plot_dimension_scaling(fig.add_subplot(3, 2, 3))
     plot_norm_preservation(fig.add_subplot(3, 2, 4))
     plot_concentration_equivalence(fig.add_subplot(3, 2, 5))
     plot_qq(fig.add_subplot(3, 2, 6))
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.subplots_adjust(left=0.07, right=0.985, bottom=0.065, top=0.91, wspace=0.24, hspace=0.42)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     out_path = os.path.join(os.path.dirname(script_dir), 'asset', 'vmf_validation.png')
-    fig.savefig(out_path, dpi=180, bbox_inches='tight', facecolor='white')
+    fig.savefig(out_path, dpi=300, bbox_inches='tight', facecolor='white')
     print(f'Image saved to: {out_path}')
     plt.close()

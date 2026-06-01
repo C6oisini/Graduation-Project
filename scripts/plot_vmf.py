@@ -6,10 +6,10 @@ Generates 4 subplots demonstrating the core characteristics of the vMF mechanism
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
 from mpl_toolkits.mplot3d import Axes3D
 import os
 
+from plot_style import apply_plot_style, style_axis
 
 # -- Inline perturbation implementation (to avoid torch dependency) --
 def vmf_perturb(x, epsilon, beta=1.0):
@@ -45,11 +45,6 @@ def laplace_perturb(x, epsilon):
     r = np.linalg.norm(x)
     scale = r / epsilon
     return x + np.random.laplace(0, scale, x.shape)
-
-# -- Global Style Configuration --
-rcParams['font.family'] = 'DejaVu Sans'
-rcParams['axes.unicode_minus'] = False
-rcParams['figure.dpi'] = 150
 
 COLOR_VMF = '#2563EB'
 COLOR_GAUSS = '#DC2626'
@@ -102,11 +97,11 @@ def plot_sphere_perturbation(ax):
     ax.set_xlim([-1.1, 1.1])
     ax.set_ylim([-1.1, 1.1])
     ax.set_zlim([-1.1, 1.1])
-    ax.set_xlabel('X', fontsize=8)
-    ax.set_ylabel('Y', fontsize=8)
-    ax.set_zlabel('Z', fontsize=8)
-    ax.set_title('(a) vMF Distribution on Unit Sphere', fontsize=11, fontweight='bold', pad=10)
-    ax.legend(fontsize=7, loc='upper left', framealpha=0.8)
+    ax.set_xlabel('X', fontsize=9, labelpad=6)
+    ax.set_ylabel('Y', fontsize=9, labelpad=6)
+    ax.set_zlabel('Z', fontsize=9, labelpad=6)
+    ax.set_title('(a) vMF Distribution on Unit Sphere', fontsize=12, fontweight='bold', pad=16)
+    ax.legend(fontsize=8, loc='upper left', bbox_to_anchor=(-0.02, 1.02), framealpha=0.9, borderaxespad=0.0)
     ax.view_init(elev=25, azim=45)
 
 
@@ -126,7 +121,7 @@ def plot_angle_vs_epsilon(ax):
     for e in key_eps:
         a = np.degrees(np.arctan(1.0 / e))
         ax.plot(e, a, 'o', color=COLOR_VMF, markersize=6, zorder=5)
-        ax.annotate(f'({e}, {a:.1f}$^\circ$)', (e, a),
+        ax.annotate(fr'({e}, {a:.1f}$^\circ$)', (e, a),
                     textcoords='offset points', xytext=(8, 5), fontsize=7)
 
     # Privacy zones
@@ -136,11 +131,11 @@ def plot_angle_vs_epsilon(ax):
 
     ax.set_xlabel(r'Privacy Budget $\epsilon$', fontsize=10)
     ax.set_ylabel(r'Deviation Angle $\theta$ (deg)', fontsize=10)
-    ax.set_title('(b) Relation between $\epsilon$ and $\theta$', fontsize=11, fontweight='bold')
-    ax.legend(fontsize=7, loc='upper right')
+    ax.set_title(r'(b) Relation between $\epsilon$ and $\theta$', fontsize=12, fontweight='bold')
+    ax.legend(fontsize=8, loc='upper right', framealpha=0.9)
     ax.set_xlim([0, 5.2])
     ax.set_ylim([0, 92])
-    ax.grid(True, alpha=0.3)
+    style_axis(ax)
 
 
 # ======================================================
@@ -167,17 +162,17 @@ def plot_norm_comparison(ax):
         norms_lap.append(np.linalg.norm(y_l))
 
     bins = np.linspace(0, max(max(norms_gauss), max(norms_lap)) * 1.05, 60)
-    ax.hist(norms_vmf, bins=bins, alpha=0.7, color=COLOR_VMF, label=f'vMF ($\mu$={np.mean(norms_vmf):.1f})', density=True)
-    ax.hist(norms_gauss, bins=bins, alpha=0.5, color=COLOR_GAUSS, label=f'Gaussian ($\mu$={np.mean(norms_gauss):.1f})', density=True)
-    ax.hist(norms_lap, bins=bins, alpha=0.5, color=COLOR_LAP, label=f'Laplace ($\mu$={np.mean(norms_lap):.1f})', density=True)
+    ax.hist(norms_vmf, bins=bins, alpha=0.7, color=COLOR_VMF, label=fr'vMF ($\mu$={np.mean(norms_vmf):.1f})', density=True)
+    ax.hist(norms_gauss, bins=bins, alpha=0.5, color=COLOR_GAUSS, label=fr'Gaussian ($\mu$={np.mean(norms_gauss):.1f})', density=True)
+    ax.hist(norms_lap, bins=bins, alpha=0.5, color=COLOR_LAP, label=fr'Laplace ($\mu$={np.mean(norms_lap):.1f})', density=True)
 
     ax.axvline(x=10.0, color='black', linestyle='--', linewidth=1.5, label='Original Norm = 10.0')
 
     ax.set_xlabel('Norm after Perturbation', fontsize=10)
     ax.set_ylabel('Probability Density', fontsize=10)
-    ax.set_title(f'(c) Norm Stability Comparison ($\epsilon$={eps}, d={d})', fontsize=11, fontweight='bold')
-    ax.legend(fontsize=7)
-    ax.grid(True, alpha=0.3)
+    ax.set_title(fr'(c) Norm Stability Comparison ($\epsilon$={eps}, d={d})', fontsize=12, fontweight='bold')
+    ax.legend(fontsize=8, framealpha=0.9)
+    style_axis(ax)
 
 
 # ======================================================
@@ -235,19 +230,20 @@ def plot_cosine_distribution(ax):
 
     ax.set_xlabel(r'Privacy Budget $\epsilon$', fontsize=10)
     ax.set_ylabel('Mean Cosine Similarity', fontsize=10)
-    ax.set_title('(d) Privacy-Utility Trade-off: Cosine Similarity', fontsize=11, fontweight='bold')
-    ax.legend(fontsize=8, loc='lower right')
+    ax.set_title('(d) Privacy-Utility Trade-off: Cosine Similarity', fontsize=12, fontweight='bold')
+    ax.legend(fontsize=8, loc='lower right', framealpha=0.9)
     ax.set_xlim([0, 5.3])
     ax.set_ylim([-0.05, 1.05])
-    ax.grid(True, alpha=0.3)
+    style_axis(ax)
 
 
 # ======================================================
 # Main Function: Combine 4 Subplots
 # ======================================================
 if __name__ == '__main__':
-    fig = plt.figure(figsize=(16, 12))
-    fig.suptitle('Visual Analysis of vMF Perturbation Mechanism', fontsize=16, fontweight='bold', y=0.98)
+    apply_plot_style()
+    fig = plt.figure(figsize=(17, 12.6))
+    fig.suptitle('Visual Analysis of vMF Perturbation Mechanism', fontsize=18, fontweight='bold', y=0.985)
 
     # (a) 3D Sphere
     ax1 = fig.add_subplot(2, 2, 1, projection='3d')
@@ -265,10 +261,10 @@ if __name__ == '__main__':
     ax4 = fig.add_subplot(2, 2, 4)
     plot_cosine_distribution(ax4)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.subplots_adjust(left=0.055, right=0.985, bottom=0.06, top=0.91, wspace=0.24, hspace=0.32)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     out_path = os.path.join(os.path.dirname(script_dir), 'asset', 'vmf_visualization.png')
-    fig.savefig(out_path, dpi=200, bbox_inches='tight', facecolor='white')
+    fig.savefig(out_path, dpi=300, bbox_inches='tight', facecolor='white')
     print(f'Image saved to: {out_path}')
     plt.close()

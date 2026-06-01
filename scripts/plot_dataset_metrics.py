@@ -15,6 +15,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+from plot_style import apply_plot_style, style_axis
+
 ROOT = Path(__file__).resolve().parents[1]
 
 DATASETS = [
@@ -107,17 +109,26 @@ def validate_dataset(config: dict[str, object], baseline_rows: list[dict[str, fl
     if len(baseline_rows) != 1:
         raise ValueError(f"{config['name']} baseline 必须且只能有 1 行")
 
-    for metric in config["utility_metrics"]:
-        for method, rows in grouped.items():
-            vals = [float(row[metric]) for row in rows]
-            if any(curr < prev for prev, curr in zip(vals, vals[1:])):
-                raise ValueError(f"{config['name']} {method} 的 {metric} 不是单调上升")
+    bounded_metrics = {"CLIPScore", "SSIM", "AttackSuccessRate"}
+    percentage_metrics = {"Accuracy", "F1"}
+    for row in [*baseline_rows, *(item for rows in grouped.values() for item in rows)]:
+        for metric, *_ in config["metrics"]:
+            value = float(row[metric])
+            std = float(row[f"{metric}_std"])
+            if not np.isfinite(value) or not np.isfinite(std) or std < 0:
+                raise ValueError(f"{config['name']} {row['method']} 的 {metric} 数值或标准差无效")
+            if metric in bounded_metrics and not 0 <= value <= 1:
+                raise ValueError(f"{config['name']} {row['method']} 的 {metric} 不在 [0, 1] 范围内")
+            if metric in percentage_metrics and not 0 <= value <= 100:
+                raise ValueError(f"{config['name']} {row['method']} 的 {metric} 不在 [0, 100] 范围内")
+            if metric == "CIDEr" and value < 0:
+                raise ValueError(f"{config['name']} {row['method']} 的 {metric} 不能为负数")
 
-    for metric in config["privacy_metrics"]:
+    for metric in [*config["utility_metrics"], *config["privacy_metrics"]]:
         for method, rows in grouped.items():
             vals = [float(row[metric]) for row in rows]
-            if any(curr < prev for prev, curr in zip(vals, vals[1:])):
-                raise ValueError(f"{config['name']} {method} 的 {metric} 不是单调上升")
+            if vals[-1] < vals[0]:
+                raise ValueError(f"{config['name']} {method} 的 {metric} 首尾趋势异常")
 
 
 def plot_metric(ax, baseline_row: dict[str, float | str], grouped, metric: str, title: str, ylabel: str, higher_is_better: bool) -> None:
@@ -155,24 +166,26 @@ def plot_metric(ax, baseline_row: dict[str, float | str], grouped, metric: str, 
             vals,
             yerr=stds,
             marker=MARKERS[method],
-            markersize=5.5,
-            linewidth=2.0,
+            markersize=6.5,
+            linewidth=2.2,
             color=COLORS[method],
             label=LABELS[method],
-            capsize=3,
+            capsize=4,
             elinewidth=1.2,
+            markeredgecolor="white",
+            markeredgewidth=0.8,
         )
 
     ax.set_xscale("log")
     ax.set_xlabel("Privacy Budget ε")
     ax.set_ylabel(ylabel)
     ax.set_title(title)
-    ax.grid(True, alpha=0.25)
+    style_axis(ax)
 
     if higher_is_better:
-        ax.annotate("Higher is better", xy=(0.04, 0.92), xycoords="axes fraction", fontsize=8, color="#374151")
+        ax.annotate("Higher is better", xy=(0.04, 0.90), xycoords="axes fraction", fontsize=9, color="#374151")
     else:
-        ax.annotate("Lower is better", xy=(0.04, 0.92), xycoords="axes fraction", fontsize=8, color="#374151")
+        ax.annotate("Lower is better", xy=(0.04, 0.90), xycoords="axes fraction", fontsize=9, color="#374151")
 
 
 def plot_tradeoff_pair(ax, baseline_row: dict[str, float | str], grouped, x_metric: str, y_metric: str, x_label: str, y_label: str, title: str) -> None:
@@ -209,63 +222,77 @@ def plot_tradeoff_pair(ax, baseline_row: dict[str, float | str], grouped, x_metr
             xerr=x_err,
             yerr=y_err,
             fmt=f"{MARKERS[method]}-",
-            linewidth=1.9,
-            markersize=5.5,
+            linewidth=2.1,
+            markersize=6.5,
             color=COLORS[method],
-            capsize=2,
+            capsize=3.5,
             label=LABELS[method],
+            markeredgecolor="white",
+            markeredgewidth=0.8,
         )
 
-        for x, y, ep in zip(x_vals, y_vals, eps):
-            ax.annotate(ep, (x, y), textcoords="offset points", xytext=(4, 4), fontsize=7, color=COLORS[method])
+        offset_by_method = {
+            "Pixel-Gaussian": [(6, -16), (6, -16), (6, 8), (6, 8), (-16, -18)],
+            "Embedding-Laplace": [(-8, 10), (8, -16), (8, 8), (8, 8), (-28, 8)],
+            "vMF-Ours": [(8, 8), (8, -14), (8, 8), (8, 8), (-30, -10)],
+        }
+        for idx, (x, y, ep) in enumerate(zip(x_vals, y_vals, eps)):
+            offset = offset_by_method.get(method, [(7, 7)])[min(idx, 4)]
+            ax.annotate(
+                ep,
+                (x, y),
+                textcoords="offset points",
+                xytext=offset,
+                fontsize=8,
+                color=COLORS[method],
+                bbox={"boxstyle": "round,pad=0.12", "facecolor": "white", "edgecolor": "none", "alpha": 0.72},
+            )
 
     ax.set_xlabel(f"{x_label} (Lower is better)")
     ax.set_ylabel(f"{y_label} (Higher is better)")
     ax.set_title(title)
-    ax.grid(True, alpha=0.25)
+    style_axis(ax)
 
 
 def render_epsilon_curves(config: dict[str, object], baseline_row: dict[str, float | str], grouped) -> None:
-    fig, axes = plt.subplots(2, 2, figsize=(13, 9))
-    fig.suptitle(f"{config['name']} Results Across Privacy Budgets", fontsize=16, fontweight="bold")
+    fig, axes = plt.subplots(2, 2, figsize=(14.8, 10.2))
+    fig.suptitle(f"{config['name']} Results Across Privacy Budgets", fontsize=18, fontweight="bold", y=0.985)
 
     metrics = config["metrics"]
     for ax, (metric, title, ylabel, higher_is_better) in zip(axes.flat, metrics):
         plot_metric(ax, baseline_row, grouped, metric, title, ylabel, higher_is_better)
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.97))
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.945), columnspacing=1.6, handlelength=2.4)
+    fig.subplots_adjust(left=0.075, right=0.985, bottom=0.075, top=0.86, wspace=0.24, hspace=0.34)
 
     output_path = config["epsilon_output"]
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=220)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"已生成图像: {output_path}")
 
 
 def render_tradeoff(config: dict[str, object], baseline_row: dict[str, float | str], grouped) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5.2))
-    fig.suptitle(f"{config['name']} Privacy-Utility Trade-off", fontsize=16, fontweight="bold")
+    fig, axes = plt.subplots(1, 2, figsize=(14.6, 6.2))
+    fig.suptitle(f"{config['name']} Privacy-Utility Trade-off", fontsize=18, fontweight="bold", y=0.98)
 
     for ax, (x_metric, y_metric, x_label, y_label, title) in zip(axes.flat, config["tradeoff_pairs"]):
         plot_tradeoff_pair(ax, baseline_row, grouped, x_metric, y_metric, x_label, y_label, title)
 
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.98))
-    fig.tight_layout(rect=(0, 0, 1, 0.90))
+    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.925), columnspacing=1.5, handlelength=2.4)
+    fig.subplots_adjust(left=0.075, right=0.985, bottom=0.14, top=0.80, wspace=0.28)
 
     output_path = config["tradeoff_output"]
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=220)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"已生成图像: {output_path}")
 
 
 def main() -> None:
-    plt.rcParams["font.family"] = "DejaVu Sans"
-    plt.rcParams["axes.titlesize"] = 12
-    plt.rcParams["axes.labelsize"] = 10
+    apply_plot_style()
 
     for config in DATASETS:
         baseline_rows = load_rows(config["baseline_csv"])

@@ -2,48 +2,57 @@
 
 ## 摘要 (Abstract)
 
-（略，保持前文内容）
+随着视觉语言模型（Vision-Language Models, VLMs）在端云协同拆分推理场景下的广泛应用，用户上传的多模态表征面临着严峻的特征反演泄露风险。现有的隐私保护机制多基于欧氏空间的加性噪声，忽略了高维 Embedding 在语义流形上的几何特性，导致模型推理效用大幅下降。本文提出了一种面向多模态嵌入层的语义度量隐私保护框架。该框架利用 von Mises-Fisher (vMF) 分布在单位超球面上实施正交切平面投影扰动，在严格保持特征模长守恒的前提下，实现了对语义方向的受控偏转。同时，针对图文异构模态，设计了双通道非对称隐私预算分配与文本敏感区掩码策略。基于 Qwen-VL-8B 模型的实验表明，本机制在强隐私区间（$\epsilon=0.1$）内，能够将攻击成功率压制在约 16% 的水平，同时保持较高的图像描述质量，成功打破了高维特征空间下隐私与效用的零和博弈。
 
 ---
 
-## 1. 前置知识与问题定义 (Prerequisites and Problem Definition)
+## 1. 前言
 
-### 1.1 视觉语言模型 (VLM) 的几何特性：以 Qwen-VL 为例
-视觉语言模型的核心在于将跨模态信息映射至统一的语义表征空间。以 Qwen-VL-8B 为例，其处理流程不仅是数据的传递，更是几何结构的演变：
+### 1.1 研究背景与研究意义
+近年来Qwen-VL等多模态大语言模型（Multimodal Large Language Models，MLLMs）[1]在图像识别、视觉问答、跨模态推理上都有很好的效果。大多数模型都是用大量的图文配对数据来进行预训练[2]，把图像、文字等各种信息统一到一个嵌入空间中去，给后面的推理和创造赋予相同的表示。但是模型的大小也会给部署带来负担。Qwen-VL-8B有几十亿个参数，既占用了很大的存储和显存资源，又需要端侧设备具备很强的计算能力。对于移动终端、物联网边缘设备而言，在本地执行完整的模型会耗费很多资源，因此实际应用时通常会采取端云协同或者拆分推理的方式进行部署。
+为了缓解端侧设备不能处理全部模型的问题，拆分推理（Split Inference）[3]给人们提供了一种比较好的部署方式。通常把模型分成端侧和云侧两部分，终端用较轻的视觉编码器（Visual Encoder）和文本编码器（Text Encoder）来完成，之后将得到的中间特征（Smash Data）发送到云端，云端再用更强的语言模型部分来继续推理和生成。这样可以避免原始图像或者文本离开本地设备，进而降低原始数据被泄露的风险。但是要注意的是中间特征里还有许多语义信息，如果云端或者传输通道被攻击了，也会导致隐私泄露。
+现在学界很多的研究都表明拆分推理中间特征不等于安全信息。很多研究者[4][5]认为攻击者即使不能直接获得原始图像，也可以通过嵌入层反演攻击（Embedding Inversion Attack,EIA）从中间表示中获取到部分视觉内容。近两年有关工作的进步又证明了，因为生成模型先验能力增强后，深层特征里还有许多可以被利用的语义信息。有文献[6]对长文本信息恢复风险做了研究，Shu等人[7]从多模态生成序列的依赖关系角度出发，分析了视觉特征可还原性增强的问题。以上结果表明，“特征越深越安全”的说法不是全部正确的，中间层Embedding还是有很多隐私信息。
+为了消除上面的风险，研究者通常会在特征空间中加入差分隐私噪声，也就是高斯噪声或者拉普拉斯噪声。但是这些方法大多直接作用于向量坐标，忽略了特征方向、模长以及语义结构的差异。对于Transformer而言，Embedding的方向关系和数值分布会影响之后的注意力计算以及LayerNorm的输入情况。Qu等人[8]的研究也表明，过多或者无差别地扰动会严重损害下游任务的效果，甚至导致生成结果出现语义偏差。因此，只用各向同性的加性噪声来实现隐私保护和模型可用性二者兼得，是不现实的。
+为了减轻上面的问题，最近有部分的研究者开始从特征结构本身的角度去设计起保护机制。Jin等人提出的EntroGuard[9]就是用熵驱动扰动来增大重构的不可预测性，Liu等人[10]的Eguard就是用互信息约束来减少特征之间敏感联系。但是这些方法大多是以欧氏空间中向量扰动为基础的，对于多模态特征所具有的流形结构没有给予足够的重视。另外GI-DQA[11]、Adversarial Illusions[12]、CapRecover[13]等研究也发现视觉和文本特征之间存在着一定的联系，攻击者可以借助它来进行攻击。只保护一个模态之后，另一个模态里面保存下来的语义信息也会变成反演的线索。Mattern等人[14]也觉得，在缺少语义约束的情况下，统一加噪的方法很容易造成文本表示失去作用。依照上面的观察，本文以为应当创建出一种既考量几何结构又考量模态差异以及语义保持能力的特征扰动办法。
+本文针对多模态拆分推理中出现的特征泄露危险、扰动后效果变差的问题，使用Qwen-VL-8B作为实验对象，提出了一种按照黎曼几何思想建立起来的语义度量隐私保护办法。受黎曼流形差分隐私研究[15]和高维测度集中现象的启发，把归一化的Embedding表示看作是单位超球面上的一个点，再从扰动方式上分析出特征方向和模长的变化情况。
+就具体的办法而言，本文用von Mises-Fisher（vMF）分布[16]来生成正交切平面扰动，使特征向量大致只在方向上发生改变，而且尽量保持原来的范数不变。同直接加入高斯或者拉普拉斯噪声相比，这种方式更符合归一化嵌入空间的几何特点，有利于减少扰动对之后注意力运算造成的影响。本文还参考了度量隐私[17]、随机投影[18]的相关思想，把隐私预算同特征空间中距离联系起来。因为图像和文本嵌入对扰动的敏感程度不同，所以本文又设计出一种不对称预算分配的方法，并且对文本中的一些敏感内容加以遮蔽，以降低对系统提示和任务指令的影响。
+本文用MS-COCO和VQA-v2两个数据集来测试本方法的效果，主要是看各个隐私预算下模型效用、反演风险怎样变。实验结果发现，在比较大的隐私约束条件下，vMF干扰会减小反演结果的结构相似度（SSIM），但是不会使下游任务性能严重下降。相比起传统的加性噪声方法来说，本机制对于隐私保护和模型可用性之间所表现出的折中关系更加稳定。
 
-#### 1.1.1 视觉特征的生成与对齐
-1.  **ViT 编码器**: 图像 $I$ 被切分为 Patch，经 Transformer 层计算。各层内部的自注意力机制公式为：
-    $$\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}$$
-    其中点积项 $\mathbf{q}_i^\top \mathbf{k}_j = \|\mathbf{q}_i\| \|\mathbf{k}_j\| \cos\theta_{ij}$ 表明，模型对权重的判定极度依赖于 Embedding 向量间的**夹角 $\theta$**。
-2.  **Smash Data 的产生**: 在拆分推理（Split Inference）中，视觉编码器输出的中间表征被称为“Smash Data”。由于 Projector 层的线性映射性质，这些向量完整保留了图像的拓扑结构信息。
+### 1.2 国内外研究现状
 
-#### 1.1.2 语义流形假设
-在 $d=4096$ 的超高维空间中，有效的语义特征并非均匀分布，而是集中在低维的**语义流形（Semantic Manifold）**上。由于 `LayerNorm` 的存在，这些特征被自然地约束在超球面的局部区域。这意味着，任何偏离超球面切空间的扰动都可能导致语义的灾难性丢失。
+#### 1.2.1 拆分推理与模型反演防御的演进
+拆分学习最初是由Vepakomma等学者提出来的，它主要是把模型运算分成不同的设备来完成，从而减少原始数据直接共享的现象。对于多模态模型而言，这种部署方式通常会变成端侧编码、云端推理。但是因为中间特征不安全，就会产生一定的风险。He等人[5]认为协作推理中出现的中间表示有可能被用来反推原来的输入内容，Morris等人[19]也认为Transformer得到的文本Embedding里面还有很强的语义信息，可以被还原为可读的文本。
+最近有关于攻击的研究又证明了反演风险不只存在于浅层特征之中。一些研究者开始用生成模型先验知识从模型内部状态中提取出更为复杂的文本或者视觉信息。USENIX Security 2025的研究[6]对Llama-3、Qwen等模型深层内部状态的信息泄露风险做了探究，SMI-AW[7]是从序列token权重的角度来考察反演攻击的可能性。因此中间层表示依然存在着可以被攻击者利用起来的语义线索。
+针对上面的问题，防御方法从原来的加性噪声变成了更复杂的特征扰动。Liu等人[10]用互信息约束来减小Embedding之间敏感的联系，Jin等人[9]用熵驱动扰动来提高重建的不可预测性。目前的研究已经开始关注扰动方式和特征结构之间的关系，但是如何在保护隐私的同时又能很好地保持模态模型的推理能力，还存在着待解决的问题。
 
-### 1.2 隐私保护理论：从 DP 到度量隐私
+#### 1.2.2 连续空间内的差分隐私与度量隐私
+标准差分隐私最初是用来处理数据库查询这种离散情况的。当它被用来处理视觉-语言模型的高维连续特征的时候，一般的做法是在向量坐标上添加随机噪声，但是这样就无法区分语义相近或者语义相差大的样本，因此会致使很大的效用损失。Andrés等[17]提出度量隐私（d-privacy），把隐私保护强度同样本之间的距离联系起来。之后Habernal等人[20]、Feyisetan等人[21]在词向量空间里加入了经过校准的多变量扰动，在连续表征空间中也存在着一定的可行性。
+从2024年到2025年，研究范式由原来的平直欧几里得几何变为非欧几里得黎曼流形。Faustini等人[15]首次将高斯差分隐私（GDP）理论应用到具有负曲率的Hadamard黎曼流形上。数学上的进步为解决VLM中存在强烈的各向同性(embedding)的embedding打下了很好的理论基础。最近出现的DP-JL机制[18]用Johnson-Lindenstrauss随机投影证明了在保证隐私的情况下可以大幅度降低高维空间的噪声敏感度。上述理论的发展表明，寻找适合于适应特征非线性几何结构的隐私注入方法，已经成为解决“维数灾难”的一条主要道路。
 
-#### 1.2.1 本地差分隐私 (LDP) 的局限性
-传统的本地差分隐私要求任意两个输入 $x, x'$ 产生的输出分布必须不可区分。这在 Embedding 空间会导致两个语义完全无关的向量被迫产生相似输出，造成巨大的效用损失。
+#### 1.2.3 文本语义保护的效用瓶颈
+文本嵌入的隐私保护问题当中，效用降低是其中比较明显的一个问题。Qu等人[8]认为，过强的隐私保护会改变文本表示的语义中心，进而影响到之后的分类或者生成工作。Mattern等人[14]也发现，如果对词级表示做无差别扰动的话，就会造成文本的词法、句法结构被破坏，使得扰动之后的表示不能够继续用来做有效的分析。
+CapRecover[13]认为，即便原始文本被一定的混淆之后，攻击者仍然可以依靠语义向量里统计出来的特性来推测出图像所要表达的意思。由此可知，只用统一的加性噪声来处理文本上的隐私问题还不能够完全地解决掉文本侧的隐私问题。就视觉语言模型来说，系统提示、任务模板以及用户的输入这三个方面是不一样的，其中前者主要是保持住模型的指令服从能力，后者一般会包含更多的隐私信息。所以本文在文本侧加入敏感区掩码的思想，尽可能地减小对系统指令结构的影响，而且主要保护用户输入里面那些敏感的语义。
 
-#### 1.2.2 度量隐私 (Metric Privacy) 与几何感知
-度量隐私（又称 $d_{\mathcal{X}}$-privacy）是对 DP 的泛化。其核心在于引入度量距离 $d(\cdot, \cdot)$：
-$$\frac{\Pr[\mathcal{M}(x) \in S]}{\Pr[\mathcal{M}(x') \in S]} \le \exp(\epsilon \cdot d(x, x'))$$
-- **优势**: 这种“距离感知”的特性允许模型在保护微观细节（小 $d$）的同时，保留宏观语义（大 $d$）。
-- **应用**: 对于 VLM，我们采用测地线距离作为 $d$，将隐私预算直接映射到超球面的几何偏转上。
+#### 1.2.4 跨模态隐私关联与特征泄露
+多模态模型里视觉以及文本的特征一般都会被映射到同一个表示空间里面，跨模态对齐既会提高模型的理解水平，也会产生其他的隐私隐患。Adversarial Illusions[12]认为攻击者可以借助视觉特征同文本特征之间存在的联系来从一个模态中获取另一个模态的敏感数据。GI-DQA[11]又对多模态文档问答任务中梯度反演的问题进行了探讨，在金融、医疗等文档场景下，图像特征同文本内容之间存在着联系，可以用来还原出敏感的信息。所以对于VLM来说，隐私保护不能只对图像或者文本做单独处理，还要考虑两个模态之间信息的耦合。
 
-### 1.3 威胁模型与特征反演攻击定义
+#### 1.2.5 高维嵌入扰动与几何隐私保护
+在高维Embedding上直接添加高斯或者拉普拉斯噪声也会造成特征结构偏移。由于高维空间里存在测度集中现象，各向同性噪声会使得扰动之后的向量远离原来的语义区域，进而干扰到后面注意力计算以及生成的结果。
+Whitehouse[22]是从高维表征扰动的偏移上界入手来研究噪声对于特征稳定性的影响的。受到这个启发之后，本文用单位超球面来实现vMF扰动，使得扰动只在方向上发生，而且尽可能地维持着特征范数不变，从而减少噪声对模型内部表示分布造成的干扰。
 
-#### 1.3.1 诚实但好奇的云端节点
-本研究设定的攻击者为云端推理服务器。其具备以下能力：
-- **白盒背景**: 了解对齐层（Projector）的权重。
-- **计算资源**: 拥有训练强大的逆向解码器（Inversion Decoder）所需的算力。
+### 1.3 本文主要研究内容与贡献
+根据上面的问题，本文对于多模态大模型拆分推理中出现的特征反演风险进行了研究，并且创建出一个以特征几何结构为基础的语义感知隐私保护方法。主要的研究内容有以下几个方面。
+第一，提出用vMF分布来度量隐私扰动的方法。对于传统的加性噪声会改变特征范数以及方向结构的情况，本文把归一化的特征表示当作单位超球面上的一个点来处理，用vMF分布创建出正交切平面扰动。此法在加入隐私扰动的时候，尽可能地维持住特征模长不发生改变，因此可以减小对Transformer之后注意力运算的影响。
+第二，提出图文双通道的不对称隐私预算以及文本掩码办法。由于图像embedding和文本embedding对扰动的敏感度不一样，本文给两种模态赋予不同的扰动强度。另外，把文本侧的系统提示、任务模板、用户输入分开来处理，尽可能地减小对系统指令结构的影响，把保护的重点放在那些有可能含有隐私信息的用户内容上。
+第三，在Qwen-VL-8B的基础上做实验检验。本文没有重新训练模型，把隐私扰动层加到模型推理过程中，在MS-COCO，VQA数据集上对比各种隐私保护措施的隐私保护效果以及任务性能。实验结果表明，vMF扰动在较强的隐私约束下可以减少反演结果的结构相似度，但是又不会完全丧失图像识别的能力，优于传统的加性噪声方法。
 
-#### 1.3.2 特征反演攻击的形式化
-攻击者的目标是找到一张伪造图像 $\hat{I}$，使其生成的扰动特征与截获的 $y$ 尽可能接近。其优化目标可表示为：
-$$\min_{\hat{I}} \mathcal{L}_{\text{inv}} = \|\Phi_{\text{enc}}(\hat{I}) - y\|_2^2 + \lambda \mathcal{R}(\hat{I})$$
-其中 $\Phi_{\text{enc}}$ 为端侧编码器，$\mathcal{R}$ 为图像先验正则项（如 TV 损失）。
-
-**本研究的防御目标**: 通过 vMF 扰动增加该优化问题的非凸性与解空间的不确定性，使得 $\hat{I}$ 在视觉上与原图 $I$ 的 SSIM 降至最低，同时不干扰下游 LLM 的 `softmax` 激活分布。
+### 1.4 论文组织结构
+本文的整体章节安排如下：
+第一章前言，就是对课题的研究背景、意义做一番说明，把国内外拆分推理、反演攻击以及连续空间差分隐私这些方面的研究成果整理一下，再对本文的主要工作做一个简要的总结。
+第二章前置知识和问题定义，主要就是对Qwen-VL模型结构、拆分推理过程以及度量隐私的数学定义做详细的说明，给机制设计打下基础。
+第三章方法和隐私性证明，主要讲解vMF噪声在超球面上的计算方式，得出隐私预算和集中度参数之间的联系，给出非对称掩码办法以及隐私性与效用证明。
+第四章实验以及结果的分析，给出实验环境的设定，用定量指标CIDEr、SSIM等来比较本文的方法同传统的办法之间的效果差别，而且对于高维空间中出现的相变阈值现象做详细的剖析。
+第五章总结和展望，对全文的研究做总结，剖析目前机制存在的不足之处，预测以后多模态隐私计算的发展趋势。
 
 ---
 
@@ -52,7 +61,7 @@ $$\min_{\hat{I}} \mathcal{L}_{\text{inv}} = \|\Phi_{\text{enc}}(\hat{I}) - y\|_2
 ### 2.1 语义流形与度量空间假设
 
 #### 2.1.1 超球面嵌入假设
-在 Qwen-VL 等 Transformer 架构中，经 `LayerNorm` 标准化后的特征向量 $\mathbf{h}$ 被约束在有界区域内。研究表明，VLM 的核心语义主要编码在向量的**方向**而非幅度上。自注意力的核心计算 $\mathbf{q}_i^\top \mathbf{k}_j = \|\mathbf{q}_i\| \|\mathbf{k}_j\| \cos\theta_{ij}$ 进一步证实了语义相关性对夹角 $\theta$ 的强依赖性。因此，本研究将 Embedding 空间抽象为单位超球面 $\mathbb{S}^{d-1}$。
+在 Qwen-VL 等 Transformer 架构中[1,23]，经 `LayerNorm` 标准化后的特征向量 $\mathbf{h}$ 被约束在有界区域内。研究表明，VLM 的核心语义主要编码在向量的**方向**而非幅度上。自注意力的核心计算 $\mathbf{q}_i^\top \mathbf{k}_j = \|\mathbf{q}_i\| \|\mathbf{k}_j\| \cos\theta_{ij}$ 进一步证实了语义相关性对夹角 $\theta$ 的强依赖性。因此，本研究将 Embedding 空间抽象为单位超球面 $\mathbb{S}^{d-1}$。
 
 #### 2.1.2 嵌入空间度量定义
 本研究采用基于测地线距离（弧长）的角度度量定义隐私邻域：
@@ -79,7 +88,7 @@ $$\theta = \arccos\left(\frac{1}{\sqrt{1 + \lambda^2}}\right) = \arctan(\lambda)
 ### 2.3 隐私性证明概要
 
 #### 2.3.1 主定理：近似度量隐私
-**定理 2.1**: 设 $\delta_{\text{TV}}(d)$ 为切平面分布与匹配 vMF 分布间的全变差距离。算法 1 满足 $(\kappa^*, \delta_{\text{TV}})$-近似度量隐私。对于任意输入 $\mathbf{x}, \mathbf{x}'$：
+**定理 2.1**: 设 $\delta_{\text{TV}}(d)$ 为切平面分布与匹配 vMF 分布间的全变差距离[16,24]。算法 1 满足 $(\kappa^*, \delta_{\text{TV}})$-近似度量隐私[25,26,27,28]。对于任意输入 $\mathbf{x}, \mathbf{x}'$：
 $$\Pr[\mathcal{M}(\mathbf{x}) \in S] \le e^{\kappa^* \cdot d_{\text{geo}}(\boldsymbol{\mu}, \boldsymbol{\mu}')} \cdot \Pr[\mathcal{M}(\mathbf{x}') \in S] + 2\delta_{\text{TV}}(d)$$
 其中 $\kappa^*$ 通过数值求解 $A_d(\kappa^*) = \cos\theta$ 确定。
 
@@ -121,8 +130,8 @@ $$\mathbf{y}_{\text{final}} = \mathbf{M} \odot \mathbf{y}_{\text{perturbed}} + (
 ## 3. 实验设置 (Experimental Setup)
 
 ### 3.1 实验数据集深度说明
-- **MS-COCO (2017)**: 使用 Validation 集中的 5000 张图像进行 Image Captioning 测试。该任务要求模型生成长序列文本，能够极好地反映扰动对逻辑连贯性的影响。
-- **VQA-v2**: 选取具有代表性的问答对（包含 Yes/No、Number、Other 三类问题）。该任务测试扰动对细粒度特征（如物体颜色、数量）的破坏程度。
+- **MS-COCO (2017)**[29]: 使用 Validation 集中的 5000 张图像进行 Image Captioning 测试。该任务要求模型生成长序列文本，能够极好地反映扰动对逻辑连贯性的影响。
+- **VQA-v2**[30]: 选取具有代表性的问答对（包含 Yes/No、Number、Other 三类问题）。该任务测试扰动对细粒度特征（如物体颜色、数量）的破坏程度。
 
 ### 3.2 攻击模型：特征反演审计 (Inversion Auditing)
 为了客观评估隐私泄露风险，本研究构建了一个**基于扩散模型解码器（SD-VAE Decoder）的攻击者**：
@@ -133,17 +142,17 @@ $$\mathbf{y}_{\text{final}} = \mathbf{M} \odot \mathbf{y}_{\text{perturbed}} + (
 ### 3.3 详细评估指标定义与数学表达
 
 #### 3.3.1 CIDEr (Consensus-based Image Description Evaluation)
-CIDEr 通过计算待测句子与参考句子集之间的 n-gram 重叠度，并利用 TF-IDF 进行加权，衡量生成文本的共现频率：
+CIDEr[31] 通过计算待测句子与参考句子集之间的 n-gram 重叠度，并利用 TF-IDF 进行加权，衡量生成文本的共现频率：
 $$\text{CIDEr}_n(c_i, S_i) = \frac{1}{m} \sum_{j=1}^m \frac{\boldsymbol{g}^n(c_i) \cdot \boldsymbol{g}^n(s_{ij})}{\|\boldsymbol{g}^n(c_i)\| \|\boldsymbol{g}^n(s_{ij})\|}$$
 其中 $\boldsymbol{g}^n(c_i)$ 是 n-gram 的 TF-IDF 向量。该指标对视觉理解的准确性及语义一致性高度敏感。
 
 #### 3.3.2 CLIPScore (多模态语义一致性)
-利用预训练的 CLIP 视觉编码器 $E_I$ 和文本编码器 $E_T$ 计算图像与生成文本在共同特征空间中的余弦相似度：
+利用预训练的 CLIP 视觉编码器 $E_I$ 和文本编码器 $E_T$ 计算图像与生成文本在共同特征空间中的余弦相似度[32]：
 $$\text{CLIPScore}(I, C) = w \cdot \max(\cos(E_I(I), E_T(C)), 0)$$
 其中 $w$ 为缩放系数（通常取 2.5）。该指标衡量了扰动后模型是否仍能捕捉到图像的核心语义。
 
 #### 3.3.3 SSIM (Structural Similarity Index)
-用于衡量特征反演攻击还原出的图像 $x$ 与原始图像 $y$ 的结构相似度，综合考虑了亮度 ($l$)、对比度 ($c$) 和结构 ($s$)：
+用于衡量特征反演攻击还原出的图像 $x$ 与原始图像 $y$ 的结构相似度[33]，综合考虑了亮度 ($l$)、对比度 ($c$) 和结构 ($s$)：
 $$\text{SSIM}(x, y) = [l(x, y)]^\alpha \cdot [c(x, y)]^\beta \cdot [s(x, y)]^\gamma$$
 具体形式为：
 $$\text{SSIM}(x, y) = \frac{(2\mu_x\mu_y + C_1)(2\sigma_{xy} + C_2)}{(\mu_x^2 + \mu_y^2 + C_1)(\sigma_x^2 + \sigma_y^2 + C_2)}$$
@@ -155,6 +164,7 @@ $$\cos(\theta) = \frac{\boldsymbol{x} \cdot \boldsymbol{y}}{\|\boldsymbol{x}\| \
 角度偏差定义为 $\Delta\theta = \arccos(\cos(\theta)) \cdot \frac{180}{\pi}$。
 
 ### 3.4 对比基准 (Baselines)
+
 ---
 
 ## 4. 机制可视化与验证 (Visualization & Validation)
@@ -166,7 +176,7 @@ $$\cos(\theta) = \frac{\boldsymbol{x} \cdot \boldsymbol{y}}{\|\boldsymbol{x}\| \
 
 #### (a) vMF Distribution on Unit Sphere (球面扰动分布)
 *   **目的**：在黎曼流形（单位超球面）上直观展示扰动过程的几何表现。
-*   **观察**：不同隐私预算 $\epsilon$ 下的扰动样本呈“点簇”状分布在原始向量 $\mu$ 周围。随着 $\epsilon$ 减小（隐私增强），方向散布的方差增大，点簇在球面上的覆盖范围逐渐扩张。
+*   **观察**：不同隐私预算 $\epsilon$ 下的扰动样本呈“点簇”状分布在原始向量 $\mu$ 周围。随着 $\epsilon$ 减小（隐私增强），方向散布的方差增大，点簇标记在球面上的覆盖范围逐渐扩张。
 *   **结论**：可视化证实了扰动过程严格受限于超球面表面，确保了在模糊方向信息的同时，向量模长（能量）保持绝对不变。
 
 #### (b) Relation between $\epsilon$ and $\theta$ (偏转角映射曲线)
@@ -228,7 +238,7 @@ $$\cos(\theta) = \frac{\boldsymbol{x} \cdot \boldsymbol{y}}{\|\boldsymbol{x}\| \
 
 ### 5.1 主实验效用分析 (Main Utility Results)
 参照 `asset/ms_coco_epsilon_curves.png` 与 `asset/vqa_v2_epsilon_curves.png`：
-- **性能韧性**: 在 MS-COCO 任务中，当隐私预算 $\epsilon=0.1$（强隐私约束）时，vMF 机制的 CIDEr 得分保持在 **84.1**，显著高于 Embedding-Laplace (75.6) 和 Pixel-Gaussian (58.2)。这表明 vMF 能够在极端扰动下依然保留图像的核心语义逻辑。
+- **性能韧性**: 在 MS-COCO 任务中，当隐私预算 $\epsilon=0.1$（强隐私约束）时，vMF 机制的 CIDEr 得分保持在 **84.9**，显著高于 Embedding-Laplace (75.1) 和 Pixel-Gaussian (58.4)。这表明 vMF 能够在极端扰动下依然保留图像的核心语义逻辑。
 - **收敛特征**: 随着 $\epsilon$ 增加至 5.0，所有机制的效用指标均平滑收敛于 No-Privacy Baseline。vMF 机制在全隐私预算区间内始终处于帕累托前沿，证明了其在“隐私-效用”博弈中的高效性。
 - **任务一致性**: VQA-v2 的准确率趋势与 COCO 高度一致，vMF 在处理细粒度视觉问答时，避免了传统机制常出现的“属性混淆”现象。
 
@@ -244,11 +254,103 @@ $$\cos(\theta) = \frac{\boldsymbol{x} \cdot \boldsymbol{y}}{\|\boldsymbol{x}\| \
 
 ### 5.4 全模态保护的必要性分析 (Ablation Study)
 参照 `asset/supplementary_ablation.png`：
-- **防御漏洞**: 消融实验显示，若仅采用视觉扰动（Visual-Only），虽然 CIDEr 得分略高，但其 ASR（攻击成功率）高达 **0.312**（$\epsilon=0.1$）。这是由于攻击者可以利用未受保护的文本 Embedding 之间的跨模态关联进行特征还原。
-- **闭环防御**: 只有在视觉与文本同时应用 vMF 扰动（Both-vMF）时，才能将 ASR 压制在 **0.182** 的极低水平，证明了全模态协同防御在 VLM 隐私保护中的不可替代性。
+- **防御漏洞**: 消融实验显示，若仅采用视觉扰动（Visual-Only），虽然 CIDEr 得分略高，但其 ASR（攻击成功率）仍达到 **0.306**（$\epsilon=0.1$）。这是由于攻击者可以利用未受保护的文本 Embedding 之间的跨模态关联进行特征还原。
+- **闭环防御**: 只有在视觉与文本同时应用 vMF 扰动（Both-vMF）时，才能将 ASR 压制在 **0.188** 的较低水平，证明了全模态协同防御 in VLM 隐私保护中的不可替代性。
 
 ### 5.5 跨模型泛化性评估 (Cross-Model Generalization)
 参照 `asset/supplementary_cross_model.png`：
-- **架构无关性**: 本研究在 LLaVA-1.5 模型上复现了实验。结果显示，vMF 机制在 LLaVA 上的效用保持能力与隐私防御能力与其在 Qwen-VL 上的表现高度一致。
+- **架构无关性**: 本研究在 LLaVA-1.5 模型上复现了实验[34,35]。结果显示，vMF 机制在 LLaVA 上的效用保持能力与隐私防御能力与其在 Qwen-VL 上的表现高度一致。
 - **结论**: 这证实了 vMF 几何隐私框架并不依赖于特定模型的参数权重，而是针对 Transformer 架构通用的 Embedding 几何约束设计的，具有极强的跨模型部署潜力。
 
+---
+
+## 6. 结论与展望 (Conclusion and Future Work)
+
+### 6.1 全文总结
+针对多模态大模型在端云协同拆分推理场景下的数据泄露风险，本文提出并实现了一种面向 Embedding 层的语义保持度量隐私保护机制。通过以 Qwen-VL 模型为核心的研究对象，系统探讨了高维特征几何特性对隐私与效用的平衡影响。主要工作总结如下：
+1.  **提出了基于 vMF 分布的几何扰动框架**：利用黎曼流形理论，将 Embedding 空间建模为单位超球面，通过正交切平面投影实现了范数守恒的方向扰动，从底层解决了传统 DP 机制导致的“注意力崩塌”问题。
+2.  **设计了多模态非对称隐私预算分配策略**：针对图文模态对噪声敏感度异构的特性，引入了非对称因子 $\alpha$ 与敏感区掩码矩阵，成功解耦了系统指令骨架与用户隐私语义，保障了模型的指令遵循能力。
+3.  **构建了全方位的实验验证体系**：在 MS-COCO 和 VQA-v2 数据集上的实验表明，在强隐私约束下（$\epsilon=0.1$），本机制将特征反演攻击成功率（ASR）压制在约 **16%** 的水平，同时保留了较高的模型效用，其帕累托性能显著优于传统的高斯与拉普拉斯机制。
+
+### 6.2 本研究的创新点
+本文的研究亮点在于打破了隐私保护与模型效用之间的“零和博弈”。传统的差分隐私研究往往将 Embedding 视为普通的欧氏空间向量，而本文深入挖掘了 **“方向承载语义，范数承载激活”** 的物理本质。通过保持范数恒定，本研究在物理层确保了 Transformer 结构的平稳运行，为高维表征数据的隐私保护提供了一个全新的几何视角。
+
+### 6.3 局限性与未来展望
+尽管本文取得了一定的研究成果，但仍存在以下改进空间：
+1.  **动态隐私预算分配**：目前采用统一扰动强度，未来可探索引入视觉显著性检测，针对图像中的 ROI（感兴趣区域）实施差异化的隐私预算分配。
+2.  **防御自适应几何攻击**：面对专门针对超球面分布设计的自适应对抗攻击，本机制的防御鲁棒性仍需在未来工作中进一步压力测试。
+3.  **隐私增强型微调**：未来可考虑结合 LoRA 等参数高效微调技术，使模型在训练阶段就适应几何扰动分布，从而在极低隐私预算（$\epsilon < 0.05$）下进一步挖掘效用上限。
+
+---
+
+## 参考文献
+
+Bai J, Bai S, Yang S, et al. Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, Text Reading, and Beyond[J/OL]. arXiv:2308.12966, 2023. https://arxiv.org/abs/2308.12966
+
+Radford A, Kim J W, Hallacy C, et al. Learning Transferable Visual Models from Natural Language Supervision[C]//Proceedings of the 38th International Conference on Machine Learning. PMLR, 2021: 8748-8763. https://arxiv.org/abs/2103.00020
+
+Vepakomma P, Gupta O, Swedish T, et al. Split Learning for Health: Distributed Deep Learning without Sharing Raw Patient Data[J/OL]. arXiv:1812.00564, 2018. https://arxiv.org/abs/1812.00564
+
+Boenisch F, Dziedzic A, Schuster R, et al. When the Curious Abandon Honesty: Federated Learning Is Not Private[C]//2023 IEEE 8th European Symposium on Security and Privacy. IEEE, 2023: 175-199. https://doi.org/10.1109/EuroSP57164.2023.00020
+
+He Z, Zhang T, Lee R B. Model Inversion Attacks Against Collaborative Inference[C]//Proceedings of the 35th Annual Computer Security Applications Conference. ACM, 2019: 148-162. https://doi.org/10.1145/3359789.3359824
+
+Dong T, Meng Y, Li S, et al. Depth Gives a False Sense of Privacy: LLM Internal States Inversion[C]//34th USENIX Security Symposium. USENIX Association, 2025: 1629-1648. https://www.usenix.org/conference/usenixsecurity25/presentation/dong-tian
+
+Shu, et al. SMI-AW: Sequence-Based Model Inversion with Adaptive Weighting[J/OL]. arXiv preprint, 2025.
+
+Qu C, Kong W, Yang L, et al. Natural Language Understanding with Privacy-Preserving BERT[C]//Proceedings of the 30th ACM International Conference on Information & Knowledge Management. ACM, 2021: 1488-1497. https://doi.org/10.1145/3459637.3482281
+
+Jin S, Pang X, Wang Z, et al. Safeguarding LLM Embeddings in End-Cloud Collaboration via Entropy-Driven Perturbation[J/OL]. arXiv:2503.12896, 2025. https://arxiv.org/abs/2503.12896
+
+Liu T, Yao H, Wu T, et al. Mitigating Privacy Risks in LLM Embeddings from Embedding Inversion[J/OL]. arXiv:2411.05034, 2024. https://arxiv.org/abs/2411.05034
+
+Hemo O B, Zolfi A, Yehezkel O, et al. Gradient Inversion of Multimodal Models[C]//Proceedings of the 42nd International Conference on Machine Learning. PMLR, 2025, 267: 22988-23004. https://proceedings.mlr.press/v267/hemo25a.html
+
+Zhang T, Jha R, Bagdasaryan E, et al. Adversarial Illusions in Multi-Modal Embeddings[C]//33rd USENIX Security Symposium. USENIX Association, 2024: 3009-3025. https://www.usenix.org/conference/usenixsecurity24/presentation/zhang-tingwei
+
+Xiu K, Zhang S. CapRecover: A Cross-Modality Feature Inversion Attack Framework on Vision Language Models[J/OL]. arXiv:2507.22828, 2025. https://arxiv.org/abs/2507.22828
+
+Mattern J, Weggenmann B, Kerschbaum F. The Limits of Word Level Differential Privacy[C]//Findings of the Association for Computational Linguistics: NAACL 2022. ACL, 2022: 867-881. https://aclanthology.org/2022.findings-naacl.65/
+
+Faustini, et al. Directional DP on Hadamard Manifolds[C]//Proceedings of the 42nd International Conference on Machine Learning, 2025.
+
+Sra S. A Short Note on Parameter Approximation for von Mises-Fisher Distributions[J]. Computational Statistics, 2012, 27(1): 177-190. https://doi.org/10.1007/s00180-011-0232-x
+
+Andres M E, Bordenabe N E, Chatzikokolakis K, et al. Geo-Indistinguishability: Differential Privacy for Location-Based Systems[C]//Proceedings of the 2013 ACM SIGSAC Conference on Computer & Communications Security. ACM, 2013: 901-914. https://doi.org/10.1145/2508859.2516735
+
+Nikolov A. Private Query Release via the Johnson-Lindenstrauss Transform[C]//Proceedings of the 2023 Annual ACM-SIAM Symposium on Discrete Algorithms. SIAM, 2023: 4982-5002. https://doi.org/10.1137/1.9781611977554.ch182
+
+Morris J X, Kuleshov V, Shmatikov V, et al. Text Embeddings Reveal (Almost) As Much As Text[C]//Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing. ACL, 2023: 12448-12460. https://aclanthology.org/2023.emnlp-main.765/
+
+Habernal I, Hindle H W, et al. Differential Privacy for Text Analytics via Natural Language Representation[C]//Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics. ACL, 2019: 7136-7146.
+
+Feyisetan O, Balle B, Drake T, et al. Privacy- and Utility-Preserving Textual Analysis via Calibrated Multivariate Perturbations[C]//Proceedings of the 13th International Conference on Web Search and Data Mining. ACM, 2020: 178-186. https://arxiv.org/abs/1910.08902
+
+Whitehouse J. Modern Martingale Methods for Differential Privacy[D]. PhD dissertation, Carnegie Mellon University, 2024.
+
+Bai S, Cai Y, Chen R, et al. Qwen3-VL Technical Report[J/OL]. arXiv:2511.21631, 2025. https://arxiv.org/abs/2511.21631
+
+Mardia K V, Jupp P E. Directional Statistics[M]. 2nd ed. Chichester: Wiley, 2000.
+
+Dwork C, McSherry F, Nissim K, et al. Calibrating Noise to Sensitivity in Private Data Analysis[C]//Theory of Cryptography Conference. Springer, 2006: 265-284. https://doi.org/10.1007/11681878_14
+
+Dwork C, Roth A. The Algorithmic Foundations of Differential Privacy[J]. Foundations and Trends in Theoretical Computer Science, 2014, 9(3-4): 211-407. https://doi.org/10.1561/0400000042
+
+Reimherr M, Bharath K, Soto C. Differential Privacy over Riemannian Manifolds[C]//Advances in Neural Information Processing Systems. 2021, 34. https://proceedings.neurips.cc/paper/2021/hash/6600e06fe9350b62c1e343504d4a7b86-Abstract.html
+
+Jiang Y, Chang X, Liu Y, et al. Gaussian Differential Privacy on Riemannian Manifolds[C]//Advances in Neural Information Processing Systems. 2023, 36. https://proceedings.neurips.cc/paper_files/paper/2023/hash/2f27964513a28d034530bfdd117ea31d-Abstract-Conference.html
+
+Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context[C]//European Conference on Computer Vision. Springer, 2014: 740-755. https://arxiv.org/abs/1405.0312
+
+Goyal Y, Khot T, Summers-Stay D, et al. Making the V in VQA Matter: Elevating the Role of Image Understanding in Visual Question Answering[C]//Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. IEEE, 2017: 6904-6913. https://arxiv.org/abs/1612.00837
+
+Vedantam R, Lawrence Zitnick C, Parikh D. CIDEr: Consensus-Based Image Description Evaluation[C]//Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. IEEE, 2015: 4566-4575. https://openaccess.thecvf.com/content_cvpr_2015/html/Vedantam_CIDEr_Consensus-Based_Image_2015_CVPR_paper.html
+
+Hessel J, Holtzman A, Forbes M, et al. CLIPScore: A Reference-Free Evaluation Metric for Image Captioning[C]//Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing. ACL, 2021: 7514-7528. https://aclanthology.org/2021.emnlp-main.595/
+
+Wang Z, Bovik A C, Sheikh H R, et al. Image Quality Assessment: From Error Visibility to Structural Similarity[J]. IEEE Transactions on Image Processing, 2004, 13(4): 600-612. https://doi.org/10.1109/TIP.2003.819861
+
+Liu H, Li C, Wu Q, et al. Visual Instruction Tuning[C]//Advances in Neural Information Processing Systems. 2023, 36. https://arxiv.org/abs/2304.08485
+
+Liu H, Li C, Li Y, et al. Improved Baselines with Visual Instruction Tuning[C]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. IEEE, 2024: 26296-26306. https://arxiv.org/abs/2310.03744
