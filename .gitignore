@@ -15,3 +15,7 @@ CLAUDE.md
 
 # Local datasets
 data/
+
+outputs/
+
+tmp/
