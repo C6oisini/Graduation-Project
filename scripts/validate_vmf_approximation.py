@@ -7,6 +7,8 @@ Generates a 3x2 validation plot + console statistical test results.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from scipy import stats
 import os
 
@@ -118,11 +120,10 @@ def plot_isotropy(ax):
     angles_polar = [np.arctan2(y[2], y[1]) for y in [tangent_plane_perturb(mu, eps) for _ in range(n_samples)]]
     counts, bin_edges = np.histogram(angles_polar, bins=60, range=(-np.pi, np.pi))
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    fig = ax.figure; pos = ax.get_position(); ax.remove()
-    ax_polar = fig.add_axes(pos, projection='polar')
-    ax_polar.bar(bin_centers, counts, width=2*np.pi/60, alpha=0.7, color=COLOR_TP)
-    ax_polar.set_title(fr'(b) Isotropy (d={d}, $\epsilon$={eps})', fontweight='bold', pad=18)
-    ax_polar.tick_params(pad=6)
+    ax.bar(bin_centers, counts, width=2*np.pi/60, alpha=0.7, color=COLOR_TP)
+    ax.set_anchor("C")
+    ax.set_title(fr'(b) Isotropy (d={d}, $\epsilon$={eps})', fontweight='bold', pad=18)
+    ax.tick_params(pad=6)
 
 def plot_dimension_scaling(ax):
     np.random.seed(456); eps = 1.0; dims = [8, 32, 128, 512, 1024]
@@ -132,14 +133,18 @@ def plot_dimension_scaling(ax):
     ax.semilogx(dims, vmf_theory, '^--', color=COLOR_VMF, linewidth=2.0, markersize=6, label='vMF Theory')
     ax.set_xlabel('Dimension d'); ax.set_ylabel('Mean Angle (deg)')
     ax.set_title(fr'(c) Dimension Scaling ($\epsilon$={eps})', fontweight='bold')
-    ax.set_ylim(44.2, 45.8)
-    ax.ticklabel_format(axis='y', style='plain', useOffset=False)
+    values = np.array([*tp_theory, *vmf_theory])
+    center = float(np.mean(values))
+    spread = max(float(np.max(values) - np.min(values)), 1e-8)
+    ax.set_ylim(center - spread * 0.8, center + spread * 0.8)
     ax.legend(fontsize=8, framealpha=0.9)
     style_axis(ax)
 
 def plot_norm_preservation(ax):
     np.random.seed(789); d, eps, n_samples = 512, 0.5, 1000
     mu = np.random.randn(d); mu = mu/np.linalg.norm(mu)*10.0
+    labels = ['vMF', 'Gaussian', 'Laplace', 'NP-Gaussian']
+    colors = [COLOR_TP, COLOR_GAUSS, COLOR_LAP, COLOR_NP]
     data = [
         [np.linalg.norm(tangent_plane_perturb(mu, eps))/10.0 for _ in range(n_samples)],
         [np.linalg.norm(gaussian_perturb(mu, eps))/10.0 for _ in range(n_samples)],
@@ -147,7 +152,7 @@ def plot_norm_preservation(ax):
         [np.linalg.norm(norm_preserving_gaussian_perturb(mu, eps))/10.0 for _ in range(n_samples)]
     ]
     parts = ax.violinplot(data, showmeans=True, widths=0.72)
-    for body, color in zip(parts['bodies'], [COLOR_TP, COLOR_GAUSS, COLOR_LAP, COLOR_NP]):
+    for body, color in zip(parts['bodies'], colors):
         body.set_facecolor(color)
         body.set_edgecolor('#374151')
         body.set_alpha(0.58)
@@ -160,7 +165,12 @@ def plot_norm_preservation(ax):
     ax.set_ylim(0.75, 380)
     ax.set_ylabel('Relative Norm (log scale)')
     ax.set_title(fr'(d) Norm Preservation (d={d})', fontweight='bold')
-    ax.legend(loc='upper left', fontsize=8, framealpha=0.9)
+    legend_handles = [
+        Patch(facecolor=color, edgecolor='#374151', alpha=0.58, label=label)
+        for label, color in zip(labels, colors)
+    ]
+    legend_handles.append(Line2D([0], [0], color='#DC2626', linestyle='--', linewidth=1.5, label='Original Norm'))
+    ax.legend(handles=legend_handles, loc='upper left', fontsize=8, framealpha=0.9, ncol=2)
     style_axis(ax, grid_axis="y")
 
 def plot_concentration_equivalence(ax):
@@ -181,10 +191,11 @@ def plot_qq(ax):
     proj_tp = sorted([np.dot(tangent_plane_perturb(mu, eps), e_proj) for _ in range(n_samples)])
     proj_vmf = sorted([np.dot(wood_vmf_sample(mu, kappa), e_proj) for _ in range(n_samples)])
     q = np.linspace(0, 1, 100)
-    ax.scatter(np.quantile(proj_vmf, q), np.quantile(proj_tp, q), s=10, color=COLOR_TP)
-    ax.plot([-0.1, 0.1], [-0.1, 0.1], 'r--')
+    ax.scatter(np.quantile(proj_vmf, q), np.quantile(proj_tp, q), s=10, color=COLOR_TP, label='TP vs vMF Quantiles')
+    ax.plot([-0.1, 0.1], [-0.1, 0.1], 'r--', label='Ideal y=x')
     ax.set_xlabel('vMF Quantiles'); ax.set_ylabel('TP Quantiles')
     ax.set_title(fr'(f) Projection QQ Plot (d={d})', fontweight='bold')
+    ax.legend(loc='upper left', fontsize=8, framealpha=0.9)
     style_axis(ax)
 
 if __name__ == '__main__':
@@ -192,14 +203,14 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(17, 13))
     fig.suptitle('Validation of vMF Tangent Plane Approximation', fontsize=18, fontweight='bold', y=0.985)
     plot_angle_distribution(fig.add_subplot(3, 2, 1))
-    plot_isotropy(fig.add_subplot(3, 2, 2))
+    plot_isotropy(fig.add_subplot(3, 2, 2, projection='polar'))
     plot_dimension_scaling(fig.add_subplot(3, 2, 3))
     plot_norm_preservation(fig.add_subplot(3, 2, 4))
     plot_concentration_equivalence(fig.add_subplot(3, 2, 5))
     plot_qq(fig.add_subplot(3, 2, 6))
     fig.subplots_adjust(left=0.07, right=0.985, bottom=0.065, top=0.91, wspace=0.24, hspace=0.42)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    out_path = os.path.join(os.path.dirname(script_dir), 'asset', 'vmf_validation.png')
+    out_path = os.path.join(os.path.dirname(script_dir), 'asset', 'vmf_validation.svg')
     fig.savefig(out_path, dpi=300, bbox_inches='tight', facecolor='white')
     print(f'Image saved to: {out_path}')
     plt.close()

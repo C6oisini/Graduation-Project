@@ -16,6 +16,7 @@ def apply_plot_style() -> None:
             "axes.unicode_minus": False,
             "figure.dpi": 160,
             "savefig.dpi": 300,
+            "svg.fonttype": "none",
             "axes.titlesize": 13,
             "axes.labelsize": 11,
             "xtick.labelsize": 10,

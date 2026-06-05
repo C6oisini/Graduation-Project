@@ -13,7 +13,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "data" / "demo_mechanism_results.csv"
-OUTPUT_PATH = ROOT / "asset" / "demo_mechanism_results.png"
+OUTPUT_PATH = ROOT / "asset" / "demo_mechanism_results.svg"
 
 COLORS = {
     "vMF": "#2563EB",

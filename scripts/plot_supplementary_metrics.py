@@ -57,8 +57,8 @@ def plot_ablation_study():
     style_axis(ax2)
     
     fig.subplots_adjust(left=0.075, right=0.985, bottom=0.14, top=0.88, wspace=0.25)
-    fig.savefig(ASSET_DIR / "supplementary_ablation.png", dpi=300, bbox_inches="tight")
-    print(f"已生成: {ASSET_DIR / 'supplementary_ablation.png'}")
+    fig.savefig(ASSET_DIR / "supplementary_ablation.svg", dpi=300, bbox_inches="tight")
+    print(f"已生成: {ASSET_DIR / 'supplementary_ablation.svg'}")
 
 def plot_norm_stability():
     data = load_csv(DATA_DIR / "norm_stability.csv")
@@ -97,8 +97,8 @@ def plot_norm_stability():
     style_axis(ax, grid_axis="y")
     
     fig.subplots_adjust(left=0.10, right=0.97, bottom=0.14, top=0.88)
-    fig.savefig(ASSET_DIR / "supplementary_norm_stability.png", dpi=300, bbox_inches="tight")
-    print(f"已生成: {ASSET_DIR / 'supplementary_norm_stability.png'}")
+    fig.savefig(ASSET_DIR / "supplementary_norm_stability.svg", dpi=300, bbox_inches="tight")
+    print(f"已生成: {ASSET_DIR / 'supplementary_norm_stability.svg'}")
 
 def plot_cross_model():
     data = load_csv(DATA_DIR / "cross_model_llava.csv")
@@ -132,8 +132,8 @@ def plot_cross_model():
     style_axis(ax1)
     ax2.tick_params(axis="y", pad=5)
     fig.subplots_adjust(left=0.10, right=0.88, bottom=0.14, top=0.88)
-    fig.savefig(ASSET_DIR / "supplementary_cross_model.png", dpi=300, bbox_inches="tight")
-    print(f"已生成: {ASSET_DIR / 'supplementary_cross_model.png'}")
+    fig.savefig(ASSET_DIR / "supplementary_cross_model.svg", dpi=300, bbox_inches="tight")
+    print(f"已生成: {ASSET_DIR / 'supplementary_cross_model.svg'}")
 
 if __name__ == "__main__":
     apply_plot_style()

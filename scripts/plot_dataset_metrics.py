@@ -24,8 +24,8 @@ DATASETS = [
         "name": "MS-COCO",
         "baseline_csv": ROOT / "data" / "ms_coco_baseline.csv",
         "results_csv": ROOT / "data" / "ms_coco_results.csv",
-        "epsilon_output": ROOT / "asset" / "ms_coco_epsilon_curves.png",
-        "tradeoff_output": ROOT / "asset" / "ms_coco_tradeoff.png",
+        "epsilon_output": ROOT / "asset" / "ms_coco_epsilon_curves.svg",
+        "tradeoff_output": ROOT / "asset" / "ms_coco_tradeoff.svg",
         "metrics": [
             ("CIDEr", "Caption Quality", "CIDEr", True),
             ("CLIPScore", "Semantic Consistency", "CLIP Score", True),
@@ -43,8 +43,8 @@ DATASETS = [
         "name": "VQA-v2",
         "baseline_csv": ROOT / "data" / "vqa_v2_baseline.csv",
         "results_csv": ROOT / "data" / "vqa_v2_results.csv",
-        "epsilon_output": ROOT / "asset" / "vqa_v2_epsilon_curves.png",
-        "tradeoff_output": ROOT / "asset" / "vqa_v2_tradeoff.png",
+        "epsilon_output": ROOT / "asset" / "vqa_v2_epsilon_curves.svg",
+        "tradeoff_output": ROOT / "asset" / "vqa_v2_tradeoff.svg",
         "metrics": [
             ("Accuracy", "Answer Accuracy", "Accuracy (%)", True),
             ("F1", "Answer F1", "F1 Score (%)", True),

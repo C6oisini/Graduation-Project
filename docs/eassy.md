@@ -129,41 +129,116 @@ $$\mathbf{y}_{\text{final}} = \mathbf{M} \odot \mathbf{y}_{\text{perturbed}} + (
 
 ## 3. 实验设置 (Experimental Setup)
 
-### 3.1 实验数据集深度说明
-- **MS-COCO (2017)**[29]: 使用 Validation 集中的 5000 张图像进行 Image Captioning 测试。该任务要求模型生成长序列文本，能够极好地反映扰动对逻辑连贯性的影响。
-- **VQA-v2**[30]: 选取具有代表性的问答对（包含 Yes/No、Number、Other 三类问题）。该任务测试扰动对细粒度特征（如物体颜色、数量）的破坏程度。
+### 3.1 实验环境与参数设置
+本文实验在单卡 GPU 环境下完成，硬件平台采用 **NVIDIA GeForce RTX 5090** 显卡进行模型推理、特征扰动和攻击审计实验。实验代码基于 **Python 3.12** 实现，并使用 `uv` 进行依赖管理，主要依赖包括 PyTorch、Transformers/ModelScope、NumPy、scikit-learn 和 Matplotlib。除跨模型泛化实验外，主实验均以 **Qwen3-VL-8B-Instruct** 作为视觉语言模型主干，文中统称为 Qwen-VL-8B；跨模型验证部分采用 **LLaVA-1.5** 作为补充模型，用于检验该机制是否依赖特定模型结构。
 
-### 3.2 攻击模型：特征反演审计 (Inversion Auditing)
-为了客观评估隐私泄露风险，本研究构建了一个**基于扩散模型解码器（SD-VAE Decoder）的攻击者**：
-1.  **数据获取**: 攻击者截获模型 Projector 层输出的扰动序列。
-2.  **优化目标**: 攻击者训练一个逆向网络 $G$，尝试最小化 $\mathcal{L} = \|G(y) - \text{Image}\|$。
-3.  **评价**: 如果 $G(y)$ 能够还原出原始图像的轮廓或文本中的关键词，则视为隐私泄露。
+本文不对 VLM 主干模型进行重新训练，而是在端云协同拆分推理场景下，将隐私扰动层插入到 embedding 上传云端之前。具体来说，端侧首先得到视觉 token embedding 和文本 token embedding，二者的隐藏维度均为 $d=4096$；随后分别对两个模态的 token 表示施加 vMF 扰动或对应基线扰动，再将扰动后的序列拼接输入云端语言模型进行后续推理。
 
-### 3.3 详细评估指标定义与数学表达
+隐私预算设置为：
+$$\epsilon \in \{0.1, 0.2, 0.5, 1.0, 2.0, 5.0\}$$
+其中 $\epsilon$ 越小表示隐私保护越强、扰动幅度越大；$\epsilon=0.1$ 作为强隐私设置，$\epsilon=0.5$ 作为中等隐私设置，$\epsilon \ge 1.0$ 作为弱隐私或高效用设置。vMF 机制中的平滑因子固定为 $\beta=1.0$，扰动幅度由 $\lambda=\beta/\epsilon$ 决定。对于图文双通道非对称预算分配，视觉通道使用系统隐私预算 $\epsilon_{\text{sys}}$，文本通道使用 $\alpha\epsilon_{\text{sys}}$，其中 $\alpha>1$ 表示文本侧采用更弱扰动，以降低对系统提示和任务指令的破坏。
 
-#### 3.3.1 CIDEr (Consensus-based Image Description Evaluation)
-CIDEr[31] 通过计算待测句子与参考句子集之间的 n-gram 重叠度，并利用 TF-IDF 进行加权，衡量生成文本的共现频率：
+对比方法包括无隐私保护的 No-Privacy Baseline、Pixel-Gaussian、Embedding-Laplace 以及本文提出的 vMF-Ours。Pixel-Gaussian 和 Embedding-Laplace 分别对应差分隐私中常见的高斯机制与拉普拉斯机制[25,26]，Embedding-Laplace 同时参考了文本和 embedding 表征空间中的扰动式隐私保护研究[8,20,21]；vMF-Ours 则基于方向统计、度量隐私和流形差分隐私相关理论[16,17,24,27,28]。对于 Gaussian 机制，实验中采用 $\delta=10^{-5}$；对于 Laplace 机制，噪声尺度随 $\epsilon$ 调整；对于 vMF 机制，扰动仅改变 embedding 方向并恢复原始范数。所有实验在相同数据划分、相同隐私预算和相同攻击审计设置下比较，以保证不同机制之间的结果具有可比性。
+
+为降低随机采样带来的偶然性，机制可视化与数值模拟实验固定随机种子，并对同一隐私预算下的多次采样结果统计均值和标准差。结果图中的阴影区间或误差范围表示不同样本上的波动情况。
+
+### 3.2 实验数据集深度说明
+本研究选取 MS-COCO 与 VQA-v2 两个视觉语言任务作为主要评估场景，分别覆盖开放式图像描述生成和视觉问答两类典型 VLM 应用。两者都需要模型同时理解图像内容和文本指令，因此能够较全面地反映中间 embedding 扰动对模型效用和隐私风险的影响。
+
+1. **MS-COCO (2017)**[29]：本文使用 MS-COCO 2017 validation 集中的图像描述任务进行评估。该验证集包含 **5000 张图像**，每张图像通常对应 5 条人工参考描述，约形成 **2.5 万条参考 caption**。实验输入为图像及对应的描述提示，模型需要生成自然语言 caption。该任务关注模型能否在扰动后保留图像中的主体、属性、动作和场景关系，适合检验长文本生成的语义连贯性。本文在该数据集上主要使用 **CIDEr** 衡量生成 caption 与人工参考描述之间的 n-gram 共识程度，使用 **CLIPScore** 衡量生成文本与图像之间的跨模态语义一致性；同时使用 **SSIM** 和 **ASR** 衡量攻击者从中间 embedding 中恢复视觉内容的风险。
+
+2. **VQA-v2**[30]：本文使用 VQA-v2 validation 集作为视觉问答评估来源。该验证集包含 **40504 张图像** 和 **214354 个问答对**，问题类型覆盖 Yes/No、Number 和 Other 三类。实验输入为图像和自然语言问题，模型需要生成简短答案。该任务更强调细粒度视觉理解能力，例如物体颜色、数量、空间关系和属性识别。本文在该数据集上主要使用 **Accuracy** 衡量模型答案是否与标准答案匹配，使用 **F1** 衡量预测答案与参考答案在关键词层面的重叠程度；同时使用 **SSIM** 和 **ASR** 评估扰动后中间表示的反演风险。
+
+因此，MS-COCO 侧重评估图像描述质量和跨模态语义保持，VQA-v2 侧重评估细粒度问答准确性。两个数据集中的效用指标不同，但隐私指标均围绕视觉重构相似度和攻击成功率展开。
+
+### 3.3 攻击模型：特征反演审计 (Inversion Auditing)
+为了客观评估端云拆分推理中的隐私泄露风险，本研究假设云端攻击者为“诚实但好奇”的灰盒攻击者：其能够截获上传到云端的扰动后 token embedding，并了解模型结构和切分位置，但不能直接访问用户原始图像和文本。针对图文双通道表示，本研究构建三类反演审计模型：
+
+1. **视觉反演攻击**：攻击者以扰动后的视觉 token embedding，或多模态序列中的视觉 token 子序列为输入，采用 FIA-Flow 风格的黑盒特征反演模型[36]，训练逆向网络 $G_v$ 将中间特征映射到可重构的视觉潜空间，并尝试恢复原始图像：
+$$\hat{I}=G_v(\tilde{X}^{I})$$
+若 $\hat{I}$ 能够还原原图的轮廓、主体物体或关键视觉语义，则认为视觉隐私发生泄露。
+
+2. **文本反演攻击**：攻击者以扰动后的文本 token embedding 为输入，参考 ALGEN 等 embedding-to-text 反演方法[37]，训练文本解码器 $G_t$ 恢复用户输入中的敏感词、实体或主要语义：
+$$\hat{T}=G_t(\tilde{X}^{T})$$
+若恢复文本 $\hat{T}$ 中包含原始用户输入 $T$ 的敏感实体、关键词或主要语义，则认为文本隐私发生泄露。
+
+3. **多模态联合反演攻击**：攻击者以扰动后的视觉 token 和文本 token 拼接序列为输入，参考 VLM 中的自适应 token 加权反演攻击[38]，训练联合攻击模型 $G_m$ 从跨模态表示中恢复任一模态的敏感信息：
+$$[\hat{I},\hat{T}]=G_m([\tilde{X}^{I};\tilde{X}^{T}])$$
+若攻击结果能够恢复图像敏感内容或文本敏感内容中的任一类，则认为多模态攻击成功。
+
+上述三类攻击分别对应视觉 ASR、文本 ASR 和多模态 ASR。本文主实验采用多模态联合反演审计作为默认攻击模型，消融实验进一步比较 Visual-Only、Text-Only 与 Both-vMF 设置下的防御效果。
+
+### 3.4 详细评估指标定义与数学表达
+
+#### 3.4.1 CIDEr (Consensus-based Image Description Evaluation)
+CIDEr[31] 用于评估图像描述任务中生成 caption 的质量。对于第 $i$ 个样本，设模型生成的描述为 $c_i$，人工参考描述集合为 $S_i=\{s_{i1},...,s_{im}\}$。CIDEr 先统计生成句子和参考句子中的 n-gram，再用 TF-IDF 权重降低常见词的影响、突出图像相关关键词，最后计算二者的加权余弦相似度：
 $$\text{CIDEr}_n(c_i, S_i) = \frac{1}{m} \sum_{j=1}^m \frac{\boldsymbol{g}^n(c_i) \cdot \boldsymbol{g}^n(s_{ij})}{\|\boldsymbol{g}^n(c_i)\| \|\boldsymbol{g}^n(s_{ij})\|}$$
-其中 $\boldsymbol{g}^n(c_i)$ 是 n-gram 的 TF-IDF 向量。该指标对视觉理解的准确性及语义一致性高度敏感。
+其中 $\boldsymbol{g}^n(c_i)$ 是生成描述中 n-gram 的 TF-IDF 向量。实际计算时通常综合 1-gram 到 4-gram 的结果，并对测试集所有样本取平均。CIDEr 数值越高，说明生成描述与人工标注在主体、属性、动作和场景关系上的一致性越强。本文将其作为 MS-COCO 图像描述任务的主要效用指标，用来衡量隐私扰动后模型是否仍能生成准确的自然语言描述。
 
-#### 3.3.2 CLIPScore (多模态语义一致性)
-利用预训练的 CLIP 视觉编码器 $E_I$ 和文本编码器 $E_T$ 计算图像与生成文本在共同特征空间中的余弦相似度[32]：
+#### 3.4.2 CLIPScore (多模态语义一致性)
+CLIPScore[32] 是一种无参考的跨模态语义一致性指标，不依赖人工 caption，而是直接比较原始图像 $I$ 与模型生成文本 $C$ 是否语义匹配。具体做法是利用预训练的 CLIP 视觉编码器 $E_I$ 和文本编码器 $E_T$ 将图像和文本映射到共同特征空间，并计算二者的余弦相似度：
 $$\text{CLIPScore}(I, C) = w \cdot \max(\cos(E_I(I), E_T(C)), 0)$$
-其中 $w$ 为缩放系数（通常取 2.5）。该指标衡量了扰动后模型是否仍能捕捉到图像的核心语义。
+其中 $w$ 为缩放系数（通常取 2.5），$\max(\cdot,0)$ 用于截断负相似度。CLIPScore 越高，说明生成文本越符合图像整体语义，例如是否描述了正确的物体类别、场景和关键属性。与 CIDEr 相比，CLIPScore 更关注图文整体匹配，而不是与参考句子的词面重合。因此，本文将其作为 MS-COCO 上的辅助效用指标，用于补充验证扰动后跨模态语义是否保持一致。
 
-#### 3.3.3 SSIM (Structural Similarity Index)
-用于衡量特征反演攻击还原出的图像 $x$ 与原始图像 $y$ 的结构相似度[33]，综合考虑了亮度 ($l$)、对比度 ($c$) 和结构 ($s$)：
+#### 3.4.3 SSIM (Structural Similarity Index)
+SSIM[33] 用于衡量特征反演攻击还原出的图像 $x$ 与原始图像 $y$ 的结构相似度。与像素级误差不同，SSIM 同时比较两张图像的亮度 ($l$)、对比度 ($c$) 和结构 ($s$)，因此更接近人眼对图像重构质量的感知：
 $$\text{SSIM}(x, y) = [l(x, y)]^\alpha \cdot [c(x, y)]^\beta \cdot [s(x, y)]^\gamma$$
 具体形式为：
 $$\text{SSIM}(x, y) = \frac{(2\mu_x\mu_y + C_1)(2\sigma_{xy} + C_2)}{(\mu_x^2 + \mu_y^2 + C_1)(\sigma_x^2 + \sigma_y^2 + C_2)}$$
-其中 $\mu$ 为均值，$\sigma$ 为方差，$\sigma_{xy}$ 为协方差。**在隐私审计中，SSIM 数值越低代表防御越成功。**
+其中 $\mu$ 为均值，$\sigma$ 为方差，$\sigma_{xy}$ 为协方差，$C_1$ 和 $C_2$ 为稳定项。SSIM 通常位于 $[0,1]$ 区间，越接近 1 表示重构图像越接近原图。需要注意的是，在本文中 SSIM 不是任务效用指标，而是隐私风险指标：攻击者重构图像与原图越相似，说明泄露风险越高。因此，**在隐私审计中，SSIM 数值越低代表防御越成功**。
 
-#### 3.3.4 余弦相似度 (Cosine Similarity)
-用于衡量扰动前后 Embedding 向量的方向偏差，也是本研究中“语义保持”的直接几何度量：
+#### 3.4.4 余弦相似度 (Cosine Similarity)
+余弦相似度用于衡量扰动前后 embedding 向量在方向上的一致性。设原始 embedding 为 $\boldsymbol{x}$，扰动后 embedding 为 $\boldsymbol{y}$，则二者夹角的余弦为：
 $$\cos(\theta) = \frac{\boldsymbol{x} \cdot \boldsymbol{y}}{\|\boldsymbol{x}\| \|\boldsymbol{y}\|}$$
 角度偏差定义为 $\Delta\theta = \arccos(\cos(\theta)) \cdot \frac{180}{\pi}$。
+在基于超球面的度量隐私框架中，embedding 的语义主要由方向决定，因此余弦相似度可以直接反映扰动是否偏离原始语义方向。该指标取值越高，说明扰动后表示与原始表示越接近；角度偏差越大，说明隐私扰动越强、语义偏移越明显。本文主要将余弦相似度用于机制可视化和几何诊断，辅助说明 vMF 扰动在相同隐私预算下比高斯和拉普拉斯噪声更容易保持方向结构；正式下游效用仍以 CIDEr、CLIPScore、Accuracy 和 F1 为主。
 
-### 3.4 对比基准 (Baselines)
+#### 3.4.5 VQA 准确率与 F1 分数
+在 VQA-v2 任务中，本文使用准确率和 F1 分数衡量模型回答质量。计算前先对模型预测答案 $\hat{a}_i$ 和标准答案 $a_i$ 做统一归一化，包括转小写、去除标点、去除多余空格，并将数字词映射为阿拉伯数字。归一化后，若预测答案与标准答案完全一致，则认为该样本回答正确：
+$$\text{Correct}(i)=\mathbf{1}[\text{norm}(\hat{a}_i)=\text{norm}(a_i)]$$
+准确率定义为回答正确样本所占比例：
+$$\text{Accuracy}=\frac{1}{N}\sum_{i=1}^{N}\text{Correct}(i)$$
+
+对于存在多个人工标注答案的 VQA-v2 样本，本文取预测答案与所有参考答案中的最大匹配得分；若实验数据只保留单一标准答案，则退化为上述 exact match 判定。
+
+F1 分数用于衡量预测答案与参考答案在词级别上的重叠程度。设归一化后的预测答案 token 集合为 $\hat{A}_i$，参考答案 token 集合为 $A_i$，则：
+$$P_i=\frac{|\hat{A}_i\cap A_i|}{|\hat{A}_i|},\quad R_i=\frac{|\hat{A}_i\cap A_i|}{|A_i|}$$
+$$F1_i=\frac{2P_iR_i}{P_i+R_i}$$
+最终 F1 为所有样本的平均值：
+$$F1=\frac{1}{N}\sum_{i=1}^{N}F1_i$$
+因此，准确率强调答案是否完全匹配，F1 则允许答案在关键词或短语层面部分匹配，更适合衡量开放式 VQA 回答的语义完整性。
+
+#### 3.4.6 攻击成功率 (Attack Success Rate, ASR)
+攻击成功率用于衡量攻击者从扰动后的中间表示中恢复隐私信息的比例。对于测试集中的 $N$ 个样本，统一定义为：
+$$\text{ASR} = \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}[\text{AttackSuccess}(i)]$$
+其中 $\mathbf{1}[\cdot]$ 为指示函数，攻击成功记为 1，否则记为 0。ASR 越低，说明隐私保护效果越好。
+
+针对图文双通道嵌入，本研究进一步区分视觉、文本和多模态三类 ASR：
+
+1. **视觉攻击成功率 $\text{ASR}_{v}$**：攻击者以扰动后的视觉 token embedding 为输入，利用 FIA-Flow 风格的特征反演模型重构图像。若重构图像 $\hat{I}$ 与原图 $I$ 的结构或语义相似度超过阈值，则认为视觉攻击成功：
+$$\text{Success}_{v}(i)=\mathbf{1}[\text{SSIM}(I_i,\hat{I}_i)\ge \tau_v]$$
+或在语义级审计中使用 CLIP 相似度作为判定依据：
+$$\text{Success}_{v}(i)=\mathbf{1}[\text{CLIPSim}(I_i,\hat{I}_i)\ge \tau_v]$$
+
+2. **文本攻击成功率 $\text{ASR}_{t}$**：攻击者以扰动后的文本 token embedding 为输入，利用 embedding-to-text 反演模型恢复用户文本。若恢复文本 $\hat{T}$ 中包含原始用户输入 $T$ 的敏感实体、关键词或主要语义，则认为文本攻击成功：
+$$\text{Success}_{t}(i)=\mathbf{1}[\text{SensitiveRecall}(T_i,\hat{T}_i)\ge \tau_t]$$
+
+3. **多模态攻击成功率 $\text{ASR}_{m}$**：攻击者以扰动后的视觉 token 与文本 token 拼接序列为输入，尝试恢复任一模态的隐私信息。若视觉侧或文本侧任一攻击成功，则认为多模态攻击成功：
+$$\text{Success}_{m}(i)=\mathbf{1}[\text{Success}_{v}(i)\lor \text{Success}_{t}(i)]$$
+$$\text{ASR}_{m}=\frac{1}{N}\sum_{i=1}^{N}\mathbf{1}[\text{Success}_{v}(i)\lor \text{Success}_{t}(i)]$$
+
+在本文主实验图中，ASR 表示联合反演审计下的多模态攻击成功率；在消融实验中，则分别统计 Visual-Only、Text-Only 与 Both-vMF 设置下的攻击成功率，用于验证双通道保护的必要性。
+
+### 3.5 对比基准 (Baselines)
+本文选择以下方法作为对比基准，用于验证 vMF 几何扰动相对于传统加性噪声方法的优势：
+
+1. **No-Privacy Baseline**：不对中间 embedding 施加任何扰动，直接将原始视觉和文本 token embedding 输入云端模型。该设置用于给出任务效用上限，同时也代表最高的特征泄露风险；其模型配置与主干 Qwen-VL/Qwen3-VL 保持一致[1,23]。
+
+2. **Pixel-Gaussian**：在输入图像或视觉侧表示上加入高斯噪声，用于模拟传统像素级扰动防御。高斯噪声是差分隐私中经典的连续噪声机制，通常通过隐私预算和灵敏度校准噪声方差[25,26]。该方法实现简单，但噪声并不直接适配 VLM 的高维 embedding 几何结构，容易破坏图像细节和下游语义理解。
+
+3. **Embedding-Laplace**：在 embedding 空间中加入拉普拉斯噪声，是差分隐私中常用的加性噪声机制[25,26]。相关文本隐私研究也常在词向量或句向量空间中进行校准扰动，以降低原始文本或语义表征泄露风险[8,20,21]。该方法能够在特征层提供一定隐私保护，但会同时改变向量方向和范数，可能导致 Transformer 内部注意力分布发生偏移。
+
+4. **vMF-Ours**：本文提出的基于 von Mises-Fisher 分布的超球面方向扰动机制。vMF 分布和方向统计为单位球面上的方向采样提供了理论基础[16,24]，度量隐私和流形差分隐私进一步支持在非欧氏空间中定义距离相关的隐私保护强度[17,27,28]。该方法将 embedding 分解为模长和方向，仅对方向进行受控偏转，并在输出阶段恢复原始范数；同时结合图文双通道非对称预算和文本敏感区掩码，实现更稳定的隐私-效用折中。
 
 ---
 
@@ -238,27 +313,32 @@ $$\cos(\theta) = \frac{\boldsymbol{x} \cdot \boldsymbol{y}}{\|\boldsymbol{x}\| \
 
 ### 5.1 主实验效用分析 (Main Utility Results)
 参照 `asset/ms_coco_epsilon_curves.png` 与 `asset/vqa_v2_epsilon_curves.png`：
-- **性能韧性**: 在 MS-COCO 任务中，当隐私预算 $\epsilon=0.1$（强隐私约束）时，vMF 机制的 CIDEr 得分保持在 **84.9**，显著高于 Embedding-Laplace (75.1) 和 Pixel-Gaussian (58.4)。这表明 vMF 能够在极端扰动下依然保留图像的核心语义逻辑。
-- **收敛特征**: 随着 $\epsilon$ 增加至 5.0，所有机制的效用指标均平滑收敛于 No-Privacy Baseline。vMF 机制在全隐私预算区间内始终处于帕累托前沿，证明了其在“隐私-效用”博弈中的高效性。
-- **任务一致性**: VQA-v2 的准确率趋势与 COCO 高度一致，vMF 在处理细粒度视觉问答时，避免了传统机制常出现的“属性混淆”现象。
+- **指标含义**: MS-COCO 使用 CIDEr 与 CLIPScore 衡量图像描述效用，二者越高说明生成文本越接近人工参考描述、越符合图像语义。VQA-v2 使用 Accuracy 与 F1 衡量问答效用，其中 Accuracy 强调答案是否完全匹配，F1 强调答案关键词和短语的部分匹配能力。
+- **性能韧性**: 在 MS-COCO 任务中，当隐私预算 $\epsilon=0.1$（强隐私约束）时，vMF 机制的 CIDEr 得分保持在 **84.9**，显著高于 Embedding-Laplace (75.1) 和 Pixel-Gaussian (58.4)。这表明 vMF 能够在强扰动下依然保留图像主体、属性和场景关系，使生成 caption 不至于完全偏离原图。
+- **问答保持能力**: 在 VQA-v2 任务中，vMF 的 Accuracy 和 F1 在各隐私预算下均高于或接近其他机制，说明其不仅能保持答案的完全匹配率，也能保留回答中的关键语义成分。相比之下，高斯和拉普拉斯加噪更容易破坏细粒度属性判断，例如颜色、数量和空间关系。
+- **收敛特征**: 随着 $\epsilon$ 增加至 5.0，扰动强度减小，所有机制的效用指标均逐渐接近 No-Privacy Baseline。vMF 机制在全隐私预算区间内始终保持更高效用，说明基于方向的扰动比坐标级加性噪声更适合高维多模态 embedding。
 
 ### 5.2 隐私-效用权衡分析 (Trade-off Curves)
 参照 `asset/ms_coco_tradeoff.png` 与 `asset/vqa_v2_tradeoff.png`：
-- **最优平衡点**: 在 Trade-off 坐标系中，vMF 曲线始终位于左上方（或最靠近坐标原点/理想区域）。在相同的攻击成功率（ASR）水平下，vMF 能够提供比其他机制高出 **10%-15%** 的相对效用增益。
-- **安全边界**: 观察 ASR 曲线可以发现，vMF 在中等隐私区（$\epsilon=0.5$）的斜率最为平缓，这意味着它能够提供更宽的“安全操作窗口”，不会因为 $\epsilon$ 的微小波动导致隐私保护瞬间失效。
+- **指标含义**: Trade-off 图横轴为隐私风险指标，ASR 和 SSIM 均越低越好；纵轴为任务效用指标，CIDEr、CLIPScore、Accuracy 和 F1 均越高越好。因此，曲线越靠近“左上方”，说明方法在较低反演风险下保持了较高任务效用。
+- **最优平衡点**: 在相同的攻击成功率（ASR）水平下，vMF 能够提供比其他机制高出 **10%-15%** 的相对效用增益；在相同 CIDEr、Accuracy 或 F1 水平下，vMF 对应的 ASR 与 SSIM 更低，说明攻击者更难从扰动后的 embedding 中恢复图像结构或敏感语义。
+- **安全边界**: 观察 ASR 曲线可以发现，vMF 在中等隐私区（$\epsilon=0.5$）的斜率更平缓，这意味着它能够提供更宽的“安全操作窗口”，不会因为 $\epsilon$ 的微小波动导致隐私保护迅速失效。
 
 ### 5.3 物理层稳定性验证 (Physical Stability)
 参照 `asset/supplementary_norm_stability.png`：
+- **指标含义**: 该图统计扰动后 embedding 范数均值。理想情况下，范数应保持在 1.0 附近；偏离越大，说明扰动越可能改变 Transformer 内部激活尺度，进而影响 LayerNorm 和注意力计算。
 - **范数偏差对比**: 条形图清晰地展示了物理层面的差异。传统 Gaussian 和 Laplace 机制在加噪后，Embedding 范数均值出现了 **10%-30%** 的向上漂移（Norm Expansion），这种漂移直接破坏了 Transformer 内部 LayerNorm 层的输入分布假设。
 - **确定性优势**: 相比之下，vMF 机制在所有 $\epsilon$ 设置下均保持了 **1.0 的恒定范数**。这种数值稳定性是模型在隐私模式下依然能维持逻辑连贯性的根本物理保证。
 
 ### 5.4 全模态保护的必要性分析 (Ablation Study)
 参照 `asset/supplementary_ablation.png`：
+- **指标含义**: 消融实验同时观察 CIDEr 和 ASR。CIDEr 越高表示图像描述效用越好，ASR 越低表示反演攻击越难成功。因此，理想方案应同时保持较高 CIDEr 和较低 ASR。
 - **防御漏洞**: 消融实验显示，若仅采用视觉扰动（Visual-Only），虽然 CIDEr 得分略高，但其 ASR（攻击成功率）仍达到 **0.306**（$\epsilon=0.1$）。这是由于攻击者可以利用未受保护的文本 Embedding 之间的跨模态关联进行特征还原。
 - **闭环防御**: 只有在视觉与文本同时应用 vMF 扰动（Both-vMF）时，才能将 ASR 压制在 **0.188** 的较低水平，证明了全模态协同防御 in VLM 隐私保护中的不可替代性。
 
 ### 5.5 跨模型泛化性评估 (Cross-Model Generalization)
 参照 `asset/supplementary_cross_model.png`：
+- **指标含义**: 跨模型实验同时报告 Accuracy 和 ASR，前者衡量迁移到 LLaVA-1.5 后的问答效用，后者衡量特征反演风险。若 vMF 在新模型上仍能保持较高 Accuracy 和较低 ASR，则说明该机制不是只针对 Qwen-VL 的特定参数有效。
 - **架构无关性**: 本研究在 LLaVA-1.5 模型上复现了实验[34,35]。结果显示，vMF 机制在 LLaVA 上的效用保持能力与隐私防御能力与其在 Qwen-VL 上的表现高度一致。
 - **结论**: 这证实了 vMF 几何隐私框架并不依赖于特定模型的参数权重，而是针对 Transformer 架构通用的 Embedding 几何约束设计的，具有极强的跨模型部署潜力。
 
@@ -354,3 +434,9 @@ Wang Z, Bovik A C, Sheikh H R, et al. Image Quality Assessment: From Error Visib
 Liu H, Li C, Wu Q, et al. Visual Instruction Tuning[C]//Advances in Neural Information Processing Systems. 2023, 36. https://arxiv.org/abs/2304.08485
 
 Liu H, Li C, Li Y, et al. Improved Baselines with Visual Instruction Tuning[C]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. IEEE, 2024: 26296-26306. https://arxiv.org/abs/2310.03744
+
+Ren J, He Z, Lee R B. What Your Features Reveal: Data-Efficient Black-Box Feature Inversion Attack for Split DNNs[J/OL]. arXiv:2511.15316, 2025. https://arxiv.org/abs/2511.15316
+
+Chen Y, Xu Q, Bjerva J. ALGEN: Few-shot Inversion Attacks on Textual Embeddings using Alignment and Generation[C/OL]//Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics. ACL, 2025. https://arxiv.org/abs/2502.11308
+
+Nguyen N B, Ho S T, Koh J H, et al. Do Vision-Language Models Leak What They Learn? Adaptive Token-Weighted Model Inversion Attacks[C/OL]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. IEEE, 2026. https://arxiv.org/abs/2508.04097

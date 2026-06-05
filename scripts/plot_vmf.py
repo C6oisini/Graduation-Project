@@ -264,7 +264,7 @@ if __name__ == '__main__':
     fig.subplots_adjust(left=0.055, right=0.985, bottom=0.06, top=0.91, wspace=0.24, hspace=0.32)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    out_path = os.path.join(os.path.dirname(script_dir), 'asset', 'vmf_visualization.png')
+    out_path = os.path.join(os.path.dirname(script_dir), 'asset', 'vmf_visualization.svg')
     fig.savefig(out_path, dpi=300, bbox_inches='tight', facecolor='white')
     print(f'Image saved to: {out_path}')
     plt.close()
