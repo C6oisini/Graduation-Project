@@ -22,11 +22,11 @@
 
 #### 1.2.1 拆分推理与模型反演防御的演进
 拆分学习最初是由Vepakomma等学者提出来的，它主要是把模型运算分成不同的设备来完成，从而减少原始数据直接共享的现象。对于多模态模型而言，这种部署方式通常会变成端侧编码、云端推理。但是因为中间特征不安全，就会产生一定的风险。He等人[5]认为协作推理中出现的中间表示有可能被用来反推原来的输入内容，Morris等人[19]也认为Transformer得到的文本Embedding里面还有很强的语义信息，可以被还原为可读的文本。
-最近有关于攻击的研究又证明了反演风险不只存在于浅层特征之中。一些研究者开始用生成模型先验知识从模型内部状态中提取出更为复杂的文本或者视觉信息。USENIX Security 2025的研究[6]对Llama-3、Qwen等模型深层内部状态的信息泄露风险做了探究，SMI-AW[7]是从序列token权重的角度来考察反演攻击的可能性。因此中间层表示依然存在着可以被攻击者利用起来的语义线索。
+最近有关于攻击的研究又证明了反演风险不只存在于浅层特征之中。一些研究者开始用生成模型先验知识从模型内部状态中提取出更为复杂的文本或者视觉信息。USENIX Security 2025的研究[6]对Llama-3、Qwen等模型深层内部状态的信息泄露风险做了探究，SMI-AW[7]是从序列token权重的角度来考察反演攻击的可能性。国内关于多模态大语言模型安全性的综述也指出，隐私泄露已经成为视觉-语言模型安全评估中的重要问题之一[42]。因此中间层表示依然存在着可以被攻击者利用起来的语义线索。
 针对上面的问题，防御方法从原来的加性噪声变成了更复杂的特征扰动。Liu等人[10]用互信息约束来减小Embedding之间敏感的联系，Jin等人[9]用熵驱动扰动来提高重建的不可预测性。目前的研究已经开始关注扰动方式和特征结构之间的关系，但是如何在保护隐私的同时又能很好地保持模态模型的推理能力，还存在着待解决的问题。
 
 #### 1.2.2 连续空间内的差分隐私与度量隐私
-标准差分隐私最初是用来处理数据库查询这种离散情况的。当它被用来处理视觉-语言模型的高维连续特征的时候，一般的做法是在向量坐标上添加随机噪声，但是这样就无法区分语义相近或者语义相差大的样本，因此会致使很大的效用损失。Andrés等[17]提出度量隐私（d-privacy），把隐私保护强度同样本之间的距离联系起来。之后Habernal等人[20]、Feyisetan等人[21]在词向量空间里加入了经过校准的多变量扰动，在连续表征空间中也存在着一定的可行性。
+标准差分隐私最初是用来处理数据库查询这种离散情况的，国内已有综述对其噪声校准、隐私预算和机器学习场景中的应用进行了系统梳理[39,40]。当它被用来处理视觉-语言模型的高维连续特征的时候，一般的做法是在向量坐标上添加随机噪声，但是这样就无法区分语义相近或者语义相差大的样本，因此会致使很大的效用损失。高维数据发布相关研究也指出，维度增长会显著放大差分隐私机制中的噪声敏感性，需要结合降维、随机投影等方法缓解效用损失[41]。Andrés等[17]提出度量隐私（d-privacy），把隐私保护强度同样本之间的距离联系起来。之后Habernal等人[20]、Feyisetan等人[21]在词向量空间里加入了经过校准的多变量扰动，在连续表征空间中也存在着一定的可行性。
 从2024年到2025年，研究范式由原来的平直欧几里得几何变为非欧几里得黎曼流形。Faustini等人[15]首次将高斯差分隐私（GDP）理论应用到具有负曲率的Hadamard黎曼流形上。数学上的进步为解决VLM中存在强烈的各向同性(embedding)的embedding打下了很好的理论基础。最近出现的DP-JL机制[18]用Johnson-Lindenstrauss随机投影证明了在保证隐私的情况下可以大幅度降低高维空间的噪声敏感度。上述理论的发展表明，寻找适合于适应特征非线性几何结构的隐私注入方法，已经成为解决“维数灾难”的一条主要道路。
 
 #### 1.2.3 文本语义保护的效用瓶颈
@@ -138,7 +138,7 @@ $$\mathbf{y}_{\text{final}} = \mathbf{M} \odot \mathbf{y}_{\text{perturbed}} + (
 $$\epsilon \in \{0.1, 0.2, 0.5, 1.0, 2.0, 5.0\}$$
 其中 $\epsilon$ 越小表示隐私保护越强、扰动幅度越大；$\epsilon=0.1$ 作为强隐私设置，$\epsilon=0.5$ 作为中等隐私设置，$\epsilon \ge 1.0$ 作为弱隐私或高效用设置。vMF 机制中的平滑因子固定为 $\beta=1.0$，扰动幅度由 $\lambda=\beta/\epsilon$ 决定。对于图文双通道非对称预算分配，视觉通道使用系统隐私预算 $\epsilon_{\text{sys}}$，文本通道使用 $\alpha\epsilon_{\text{sys}}$，其中 $\alpha>1$ 表示文本侧采用更弱扰动，以降低对系统提示和任务指令的破坏。
 
-对比方法包括无隐私保护的 No-Privacy Baseline、Pixel-Gaussian、Embedding-Laplace 以及本文提出的 vMF-Ours。Pixel-Gaussian 和 Embedding-Laplace 分别对应差分隐私中常见的高斯机制与拉普拉斯机制[25,26]，Embedding-Laplace 同时参考了文本和 embedding 表征空间中的扰动式隐私保护研究[8,20,21]；vMF-Ours 则基于方向统计、度量隐私和流形差分隐私相关理论[16,17,24,27,28]。对于 Gaussian 机制，实验中采用 $\delta=10^{-5}$；对于 Laplace 机制，噪声尺度随 $\epsilon$ 调整；对于 vMF 机制，扰动仅改变 embedding 方向并恢复原始范数。所有实验在相同数据划分、相同隐私预算和相同攻击审计设置下比较，以保证不同机制之间的结果具有可比性。
+对比方法包括无隐私保护的 No-Privacy Baseline、Pixel-Gaussian、Embedding-Laplace 以及本文提出的 vMF-Ours。Pixel-Gaussian 和 Embedding-Laplace 分别对应差分隐私中常见的高斯机制与拉普拉斯机制[25,26,39,40]，Embedding-Laplace 同时参考了文本和 embedding 表征空间中的扰动式隐私保护研究[8,20,21]；vMF-Ours 则基于方向统计、度量隐私和流形差分隐私相关理论[16,17,24,27,28]。由于 VLM embedding 属于典型高维连续表征，本文也参考高维差分隐私研究中关于维度增长、降维与随机投影的讨论[41]。对于 Gaussian 机制，实验中采用 $\delta=10^{-5}$；对于 Laplace 机制，噪声尺度随 $\epsilon$ 调整；对于 vMF 机制，扰动仅改变 embedding 方向并恢复原始范数。所有实验在相同数据划分、相同隐私预算和相同攻击审计设置下比较，以保证不同机制之间的结果具有可比性。
 
 为降低随机采样带来的偶然性，机制可视化与数值模拟实验固定随机种子，并对同一隐私预算下的多次采样结果统计均值和标准差。结果图中的阴影区间或误差范围表示不同样本上的波动情况。
 
@@ -440,3 +440,11 @@ Ren J, He Z, Lee R B. What Your Features Reveal: Data-Efficient Black-Box Featur
 Chen Y, Xu Q, Bjerva J. ALGEN: Few-shot Inversion Attacks on Textual Embeddings using Alignment and Generation[C/OL]//Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics. ACL, 2025. https://arxiv.org/abs/2502.11308
 
 Nguyen N B, Ho S T, Koh J H, et al. Do Vision-Language Models Leak What They Learn? Adaptive Token-Weighted Model Inversion Attacks[C/OL]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. IEEE, 2026. https://arxiv.org/abs/2508.04097
+
+高志强, 王宇涛. 差分隐私技术研究进展[J]. 通信学报, 2017, 38(Z1): 151-155. https://doi.org/10.11959/j.issn.1000-436x.2017248
+
+谭作文, 张连福. 机器学习隐私保护研究综述[J]. 软件学报, 2020, 31(7): 2127-2156. https://doi.org/10.13328/j.cnki.jos.005815
+
+张兴, 陈昊. 差分隐私的高维数据发布研究综述[J]. 智能系统学报, 2021, 16(6): 989-998. https://doi.org/10.11992/tis.202012013
+
+陈晋音, 席昌坤, 郑海斌, 高铭, 张甜馨. 多模态大语言模型的安全性研究综述[J]. 计算机科学, 2025, 52(7): 315-341. https://www.jsjkx.com/CN/Y2025/V52/I7/315
